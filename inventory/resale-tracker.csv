@@ -1,0 +1,7 @@
+Item,Condition,Listed_Price,Sold_Price,Status,Date
+FortiGate 80E,Excellent,700,630,SOLD,2024-11-15
+FortiSwitch 124F-PoE,Good,550,480,SOLD,2024-11-18
+FortiSwitch 108E-PoE,Good,400,320,SOLD,2024-11-20
+Juniper ACX1100,Fair,350,,PENDING,
+TRENDnet TPE-TG44g (3×),Good,180,,LISTED,
+Cloud Key Gen2,Excellent,100,,KEEPING,Adopted into UDM

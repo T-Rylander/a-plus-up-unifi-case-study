@@ -1,0 +1,69 @@
+# .gitignore for T3-ETERNAL
+
+# Environment files (NEVER commit credentials)
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Backups (local only, not in repo)
+backups/
+*.backup
+*.bak
+
+# Sensitive configs
+config/secrets/
+*-secret.json
+*-credentials.json
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Terraform state (if used)
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+
+# SSH keys
+*.pub
+id_rsa
+id_ed25519
+
+# Python cache (if any Python scripts)
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Node modules (if any JS tooling)
+node_modules/
+
+# Coverage reports
+coverage/
+*.coverage
+
+# Build artifacts
+dist/
+build/

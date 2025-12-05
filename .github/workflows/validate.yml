@@ -1,0 +1,96 @@
+name: T3-ETERNAL Validation
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # 3 AM UTC daily
+  workflow_dispatch:  # Manual trigger
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/**'
+      - 'config/**'
+
+jobs:
+  validate-eternal:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl jq sshpass iputils-ping
+      
+      - name: Run validate-eternal.sh
+        env:
+          UDM_HOST: ${{ secrets.UDM_HOST }}
+          UDM_USER: ${{ secrets.UDM_USER }}
+          UDM_PASS: ${{ secrets.UDM_PASS }}
+        run: |
+          chmod +x scripts/validate-eternal.sh
+          ./scripts/validate-eternal.sh
+      
+      - name: Update resale tracker
+        run: |
+          chmod +x scripts/resale-tracker-update.sh
+          ./scripts/resale-tracker-update.sh
+      
+      - name: Upload validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-logs
+          path: logs/
+          retention-days: 30
+      
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 T3-ETERNAL Validation FAILED',
+              body: '❌ Nightly validation failed. Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}',
+              labels: ['alert', 'validation-failure']
+            })
+
+  check-shellcheck:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Run ShellCheck on all scripts
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: './scripts'
+          severity: warning
+          ignore_paths: |
+            node_modules
+            .git
+
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Run Trivy security scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
