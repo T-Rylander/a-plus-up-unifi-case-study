@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  avahi-reflector:
+    image: flungo/avahi
+    container_name: avahi-mdns-reflector
+    network_mode: host
+    restart: unless-stopped
+    
+    environment:
+      # Reflect mDNS between VLAN 10 (students) and VLAN 20 (staff/printers) ONLY
+      - AVAHI_INTERFACES=br10,br20
+      - AVAHI_REFLECTOR=yes
+      - AVAHI_ENABLE_DBUS=no
+    
+    volumes:
+      - ./avahi-daemon.conf:/etc/avahi/avahi-daemon.conf:ro
+    
+    cap_add:
+      - NET_ADMIN
+    
+    labels:
+      - "com.unifi.network=vlan10-vlan20-reflector"
+      - "com.a-plus-up.service=mdns-printer-discovery"
+      - "com.a-plus-up.deployment=production"
+    
+    # Healthcheck: verify Avahi daemon is running
+    healthcheck:
+      test: ["CMD", "avahi-browse", "-a", "-t", "-r"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+  # Optional: mDNS traffic monitor for troubleshooting
+  mdns-monitor:
+    image: nicolaka/netshoot
+    container_name: mdns-traffic-monitor
+    network_mode: host
+    command: ["sleep", "infinity"]
+    restart: unless-stopped
+    
+    labels:
+      - "com.a-plus-up.service=mdns-troubleshooting"
+    
+    profiles:
+      - debug
+    
+    # Usage: docker exec -it mdns-traffic-monitor tcpdump -i br10 port 5353
+
+# Deployment notes:
+# 1. Deploy on UDM Pro Max via SSH + podman-compose
+# 2. Disable native UniFi mDNS (conflicts with Avahi)
+# 3. Validate printer discovery from VLAN 10 (student Chromebooks)
+# 4. Monitor reflector health via healthcheck status
+#
+# Validation:
+#   ssh admin@10.99.0.1
+#   podman ps | grep avahi
+#   podman logs avahi-mdns-reflector
+#
+# Troubleshooting:
+#   docker-compose --profile debug up -d
+#   docker exec -it mdns-traffic-monitor tcpdump -i br10 port 5353

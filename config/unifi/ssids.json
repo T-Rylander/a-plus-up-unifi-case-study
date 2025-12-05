@@ -1,0 +1,282 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
+  "description": "UniFi SSID Configuration for A+UP Charter School - 4 SSIDs with corrected roaming (802.11k/v NOT 802.11r)",
+  "last_updated": "2025-12-05",
+  "source": "T3-ETERNAL v1.1 - Comprehensive Corrections, ADR-003 WiFi Architecture",
+  "note": "Separate 2.4GHz printer SSID required (cannot selectively enable 2.4GHz on specific APs per SSID)",
+  
+  "ssids": [
+    {
+      "name": "Student-WiFi",
+      "security": "wpapsk",
+      "passphrase": "${WIFI_PASSWORD_STUDENTS}",
+      "network_id": "VLAN10",
+      "enabled": true,
+      "hide_ssid": false,
+      "wpa_mode": "wpa2",
+      "wpa_enc": "ccmp",
+      "radio_settings": {
+        "ng": {
+          "enabled": false,
+          "note": "2.4GHz DISABLED globally for students - forces 5GHz for better performance"
+        },
+        "na": {
+          "enabled": true,
+          "tx_power_mode": "medium",
+          "channel": "auto",
+          "channel_width": "80",
+          "min_rssi": -67,
+          "min_rssi_enabled": true,
+          "note": "80MHz channels for 802.11ac performance, RSSI threshold enforces client steering"
+        }
+      },
+      "fast_roaming_enabled": true,
+      "roam_radio_type": "802.11k/v",
+      "roaming_configuration": {
+        "802_11k": true,
+        "802_11v": true,
+        "802_11r": false,
+        "rationale": "802.11r DISABLED - Chromebook compatibility issues with pre-2020 models (AUE dates before 2026). Using 802.11k (neighbor reports) and 802.11v (BSS transition management) for assisted roaming instead."
+      },
+      "band_steering": {
+        "enabled": false,
+        "note": "Not needed - 2.4GHz disabled, clients forced to 5GHz"
+      },
+      "client_device_isolation": false,
+      "group_rekey": 3600,
+      "broadcast_on_aps": "all",
+      "usage": "150+ Chromebooks, student-owned devices",
+      "compliance": "CIPA content filtering via CyberSecure",
+      "validation": [
+        "Chromebook association: <5 seconds",
+        "Roaming between APs: <200ms handoff",
+        "RSSI threshold: clients should disconnect below -67 dBm and roam to stronger AP",
+        "No 802.11r issues on older Chromebooks (2018-2020 models)"
+      ]
+    },
+    {
+      "name": "Printers-Legacy",
+      "security": "wpapsk",
+      "passphrase": "${WIFI_PASSWORD_PRINTERS}",
+      "network_id": "VLAN20",
+      "enabled": true,
+      "hide_ssid": true,
+      "wpa_mode": "wpa2",
+      "wpa_enc": "ccmp",
+      "radio_settings": {
+        "ng": {
+          "enabled": true,
+          "tx_power_mode": "low",
+          "channel": "1",
+          "channel_width": "20",
+          "note": "2.4GHz ONLY for legacy printers that don't support 5GHz. Low power to reduce interference."
+        },
+        "na": {
+          "enabled": false,
+          "note": "5GHz disabled for this SSID - printers require 2.4GHz"
+        }
+      },
+      "fast_roaming_enabled": false,
+      "band_steering": {
+        "enabled": false,
+        "note": "Not applicable - single band SSID"
+      },
+      "client_device_isolation": false,
+      "group_rekey": 86400,
+      "ap_group": "Printer-APs",
+      "broadcast_on_aps": "selective",
+      "ap_group_members": [
+        "WAP2 (e4:38:83:aa:bb:02) - Rm208 printer area",
+        "WAP4 (e4:38:83:aa:bb:04) - Rm208 redundant coverage"
+      ],
+      "rationale": "Separate SSID required because UniFi does NOT support per-AP radio enable/disable. Cannot selectively enable 2.4GHz on WAP2/WAP4 only for Student-WiFi. Must use AP Group + dedicated SSID.",
+      "usage": "40+ legacy wireless printers requiring 2.4GHz connectivity",
+      "mdns_integration": "Avahi reflector container provides VLAN 10 ↔ VLAN 20 mDNS bridging for printer discovery",
+      "validation": [
+        "Printer association: all 40+ printers connected to WAP2 or WAP4",
+        "SSID visibility: hidden SSID only broadcast on designated APs",
+        "mDNS discovery: students on VLAN 10 can discover printers via Avahi reflector"
+      ]
+    },
+    {
+      "name": "Staff-Secure",
+      "security": "wpapsk",
+      "passphrase": "${WIFI_PASSWORD_STAFF}",
+      "network_id": "VLAN20",
+      "enabled": true,
+      "hide_ssid": false,
+      "wpa_mode": "wpa2",
+      "wpa_enc": "ccmp",
+      "radio_settings": {
+        "ng": {
+          "enabled": false,
+          "note": "2.4GHz disabled - staff devices support 5GHz"
+        },
+        "na": {
+          "enabled": true,
+          "tx_power_mode": "high",
+          "channel": "auto",
+          "channel_width": "80",
+          "min_rssi": -70,
+          "min_rssi_enabled": true
+        }
+      },
+      "fast_roaming_enabled": true,
+      "roam_radio_type": "802.11k/v/r",
+      "roaming_configuration": {
+        "802_11k": true,
+        "802_11v": true,
+        "802_11r": true,
+        "rationale": "802.11r ENABLED for staff - modern devices (2020+ laptops, smartphones) support fast roaming. Staff mobility requirements higher than students."
+      },
+      "band_steering": {
+        "enabled": false,
+        "note": "Not needed - 2.4GHz disabled"
+      },
+      "client_device_isolation": false,
+      "group_rekey": 3600,
+      "broadcast_on_aps": "all",
+      "usage": "Staff workstations, smartphones, tablets",
+      "validation": [
+        "Fast roaming: <100ms handoff with 802.11r",
+        "VoIP calls: no drops during roaming (test with Yealink softphone)",
+        "Coverage: all classrooms and offices"
+      ]
+    },
+    {
+      "name": "Guest-Portal",
+      "security": "open",
+      "network_id": "VLAN30",
+      "enabled": true,
+      "hide_ssid": false,
+      "captive_portal_enabled": true,
+      "guest_policy": {
+        "authorization_type": "simple_password",
+        "portal_password": "${GUEST_PORTAL_PASSWORD}",
+        "session_timeout": 3600,
+        "idle_timeout": 600,
+        "download_limit_kbps": 25000,
+        "upload_limit_kbps": 10000
+      },
+      "radio_settings": {
+        "ng": {
+          "enabled": true,
+          "tx_power_mode": "low",
+          "channel": "11",
+          "channel_width": "20",
+          "note": "2.4GHz enabled for maximum guest device compatibility (older phones)"
+        },
+        "na": {
+          "enabled": true,
+          "tx_power_mode": "medium",
+          "channel": "auto",
+          "channel_width": "40",
+          "note": "5GHz with 40MHz channels (narrower than student/staff for guest priority)"
+        }
+      },
+      "fast_roaming_enabled": false,
+      "band_steering": {
+        "enabled": true,
+        "prefer_5g": true,
+        "min_rssi_5g": -75,
+        "note": "Prefer 5GHz but allow 2.4GHz fallback for older devices"
+      },
+      "client_device_isolation": true,
+      "group_rekey": 86400,
+      "broadcast_on_aps": "all",
+      "usage": "Visitor WiFi access - parents, contractors, guests",
+      "compliance": "RFC1918 isolation via firewall rules (no internal network access)",
+      "validation": [
+        "Captive portal: displays password prompt on association",
+        "Bandwidth throttle: speed test shows ~25/10 Mbps",
+        "Isolation: guests cannot ping 10.x.x.x addresses"
+      ]
+    }
+  ],
+  
+  "ap_groups": [
+    {
+      "name": "Printer-APs",
+      "description": "APs broadcasting Printers-Legacy SSID only",
+      "ap_macs": [
+        "e4:38:83:aa:bb:02",
+        "e4:38:83:aa:bb:04"
+      ],
+      "ap_names": [
+        "WAP2 - Rm208 (printer area)",
+        "WAP4 - Rm208 (redundant)"
+      ],
+      "ssid_overrides": {
+        "Student-WiFi": "broadcast",
+        "Printers-Legacy": "broadcast",
+        "Staff-Secure": "broadcast",
+        "Guest-Portal": "broadcast"
+      },
+      "note": "Printers-Legacy SSID ONLY broadcast on these APs (2.4GHz carve-out)"
+    }
+  ],
+  
+  "channel_allocation": {
+    "5ghz_channels": [36, 52, 100, 116, 132, 149],
+    "channel_width": "80MHz",
+    "auto_channel_selection": true,
+    "dfs_channels_enabled": true,
+    "note": "6 non-overlapping 80MHz channels in 5GHz band. Auto-selection avoids DFS radar events."
+  },
+  
+  "chromebook_compatibility": {
+    "802_11r_issue": "Pre-2020 Chromebooks (AUE dates before 2026) may disconnect or fail to roam with 802.11r enabled",
+    "solution": "Use 802.11k (neighbor reports) + 802.11v (BSS transition management) instead",
+    "affected_models": [
+      "Check inventory/chromebook-inventory.json for models with AUE <2026",
+      "Run scripts/check-chromebook-compatibility.sh before deployment"
+    ],
+    "validation": "Deploy Student-WiFi to 10 pilot Chromebooks (mix of old/new models) for 1 week before full rollout"
+  },
+  
+  "deployment_notes": {
+    "creation_method": "UniFi Network Application UI → Settings → WiFi",
+    "api_endpoint": "api/s/default/rest/wlanconf",
+    "ap_group_creation": "Settings → Profiles → AP Groups → Create 'Printer-APs'",
+    "ssid_order": [
+      "1. Create all 4 SSIDs",
+      "2. Create AP Group 'Printer-APs'",
+      "3. Assign Printers-Legacy SSID to AP Group",
+      "4. Validate printer connectivity before disabling wired printers"
+    ],
+    "validation_commands": [
+      "# Check SSID broadcast status",
+      "ssh admin@10.99.0.1 'show wireless status'",
+      "",
+      "# Test roaming",
+      "# Associate Chromebook to Student-WiFi near WAP1",
+      "# Walk toward WAP2, monitor handoff time",
+      "# Target: <200ms with 802.11k/v",
+      "",
+      "# Verify printer SSID limited to WAP2/4",
+      "iwlist wlan0 scan | grep 'Printers-Legacy'",
+      "# Should only appear near Rm208"
+    ]
+  },
+  
+  "security_notes": {
+    "wpa2_rationale": "WPA3 not enabled - older Chromebooks and printers lack support",
+    "psk_rotation": "Rotate Student-WiFi passphrase annually, Staff-Secure semi-annually",
+    "guest_isolation": "Client device isolation prevents peer-to-peer attacks on guest network",
+    "hidden_ssid": "Printers-Legacy hidden to reduce SSID clutter and discourage unauthorized use"
+  },
+  
+  "future_enhancements": {
+    "google_workspace_sso": "Phase 2 (Q2 2026) - 802.1X with FreeRADIUS + Google Secure LDAP",
+    "wpa3_migration": "Phase 3 (2027) - After Chromebook fleet refresh (all devices AUE 2028+)",
+    "wifi6_upgrade": "Phase 4 (2028) - Replace UAP-AC-PRO with WiFi 6 APs for 160MHz channels"
+  },
+  
+  "references": [
+    "ADR-003: WiFi Architecture and 802.11k/v Roaming",
+    "Chromebook Inventory: inventory/chromebook-inventory.json",
+    "Compatibility Check: scripts/check-chromebook-compatibility.sh",
+    "UniFi Docs: help.ui.com/hc/en-us/articles/115002262328-UniFi-Fast-Roaming"
+  ]
+}

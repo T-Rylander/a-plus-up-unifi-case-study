@@ -1,0 +1,178 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
+  "description": "UniFi Manual QoS Traffic Rules for A+UP Charter School - NO auto-DPI tagging",
+  "last_updated": "2025-12-05",
+  "source": "T3-ETERNAL v1.1 - Comprehensive Corrections",
+  "note": "CyberSecure DPI does NOT auto-populate QoS. All traffic rules must be configured manually.",
+  
+  "smart_queues": {
+    "enabled": true,
+    "description": "Asymmetric WAN shaping for Comcast 1000/50 Mbps connection",
+    "download_limit_kbps": 950000,
+    "upload_limit_kbps": 47500,
+    "rationale": "Set to 95% of ISP speeds to prevent buffer bloat and maintain low latency",
+    "wan_type": "Asymmetric (1000 Mbps down / 50 Mbps up)",
+    "validation": "Speed test should show consistent 950/47 Mbps with <10ms jitter"
+  },
+  
+  "traffic_rules": [
+    {
+      "id": 101,
+      "name": "VoIP Priority (Yealink SIP)",
+      "enabled": true,
+      "matching": {
+        "src_network": "10.50.0.0/27",
+        "protocol": "udp",
+        "dst_port": "5060-5061,10000-65535",
+        "description": "Match all Yealink phone traffic (SIP signaling + RTP media)"
+      },
+      "action": {
+        "dscp": 46,
+        "dscp_name": "EF (Expedited Forwarding)",
+        "802_1p": 5,
+        "description": "Highest priority for voice traffic - ensures <30ms jitter"
+      },
+      "target": "WAN",
+      "bandwidth_reservation": "Minimum 1 Mbps per active call (8 phones × 100 kbps = 800 kbps)",
+      "validation": [
+        "Monitor jitter: <30ms required for G.722 codec quality",
+        "Test call quality during peak hours (8am-3pm)",
+        "Verify DSCP marking: tcpdump -i eth0 -v 'udp port 5060'"
+      ]
+    },
+    {
+      "id": 102,
+      "name": "Verkada Cameras Priority",
+      "enabled": true,
+      "matching": {
+        "src_network": "10.60.0.0/26",
+        "protocol": "tcp",
+        "dst_port": "443,554",
+        "description": "Match Verkada cloud uploads and RTSP streaming"
+      },
+      "action": {
+        "dscp": 34,
+        "dscp_name": "AF41 (Assured Forwarding Class 4)",
+        "802_1p": 4,
+        "description": "High priority for camera traffic - prevents recording gaps"
+      },
+      "target": "WAN",
+      "bandwidth_allocation": {
+        "idle": "100 Kbps per camera (1.1 Mbps total for 11 cameras)",
+        "live_view": "3-45 Mbps per camera (burst)",
+        "note": "Idle traffic is minimal, live view priority prevents buffering"
+      },
+      "validation": [
+        "Check Command dashboard for upload health (should be green)",
+        "Test live view from remote location (no buffering)",
+        "Monitor bandwidth: cameras should not exceed 50 Mbps total during business hours"
+      ]
+    },
+    {
+      "id": 103,
+      "name": "Chromebook Google Meet Priority",
+      "enabled": true,
+      "matching": {
+        "src_network": "10.10.0.0/23",
+        "protocol": "tcp_udp",
+        "dst_address": "*.google.com,*.googleapis.com",
+        "dst_port": "443,19302-19309",
+        "description": "Match Google Meet video conferencing traffic"
+      },
+      "action": {
+        "dscp": 26,
+        "dscp_name": "AF31 (Assured Forwarding Class 3)",
+        "802_1p": 3,
+        "description": "Medium-high priority for classroom video calls"
+      },
+      "target": "WAN",
+      "bandwidth_limit": {
+        "per_classroom": "100 Mbps burst (30 Chromebooks × 3 Mbps each)",
+        "total_concurrent": "300 Mbps (3 classrooms simultaneous Meet calls)",
+        "note": "Meet adapts quality to available bandwidth"
+      },
+      "validation": [
+        "Test Meet call quality: should be 720p HD with no freezing",
+        "Monitor concurrent calls: 3 classrooms should work simultaneously",
+        "Check latency: <50ms to Google edge servers"
+      ]
+    },
+    {
+      "id": 104,
+      "name": "Guest WiFi Throttle",
+      "enabled": true,
+      "matching": {
+        "src_network": "10.30.0.0/24",
+        "protocol": "all",
+        "description": "Match all guest WiFi traffic"
+      },
+      "action": {
+        "rate_limit_download": "25000",
+        "rate_limit_upload": "10000",
+        "dscp": 0,
+        "dscp_name": "Best Effort (default)",
+        "802_1p": 0,
+        "description": "Throttle guest traffic to prevent bandwidth abuse"
+      },
+      "target": "WAN",
+      "bandwidth_allocation": {
+        "download": "25 Mbps total (shared among all guests)",
+        "upload": "10 Mbps total",
+        "note": "Sufficient for basic web browsing and email"
+      },
+      "validation": [
+        "Speed test from guest network should show ~25/10 Mbps",
+        "Guest traffic should not impact student or staff performance"
+      ]
+    }
+  ],
+  
+  "dscp_reference": {
+    "EF_46": "Expedited Forwarding - VoIP, real-time traffic",
+    "AF41_34": "Assured Forwarding Class 4 - High-priority video/data",
+    "AF31_26": "Assured Forwarding Class 3 - Medium-priority video",
+    "CS4_32": "Class Selector 4 - Staff priority traffic",
+    "BE_0": "Best Effort - Default traffic"
+  },
+  
+  "deployment_notes": {
+    "creation_method": "UniFi Network Application UI → Settings → Traffic Management → Traffic Rules",
+    "api_endpoint": "api/s/default/rest/trafficrule",
+    "manual_configuration_required": true,
+    "cybersecure_limitation": "CyberSecure DPI identifies applications but does NOT auto-create QoS rules. All rules must be manually configured.",
+    "smart_queues_prerequisite": "Must enable Smart Queues first, then create Traffic Rules",
+    "validation_commands": [
+      "# Check Smart Queues status",
+      "curl -s http://udm.local/api/s/default/rest/wanconf | jq '.smart_queues'",
+      "",
+      "# Verify DSCP marking on VoIP traffic",
+      "tcpdump -i br50 -v 'udp port 5060' | grep 'tos'",
+      "# Should show 'tos 0xb8' (DSCP 46 / EF)",
+      "",
+      "# Test bandwidth limits",
+      "# From guest device: speedtest-cli",
+      "# Should show ~25/10 Mbps"
+    ]
+  },
+  
+  "maintenance_schedule": {
+    "monthly": "Review bandwidth utilization per VLAN",
+    "quarterly": "Adjust DSCP markings based on application performance",
+    "annually": "Re-validate Smart Queue speeds against ISP contract"
+  },
+  
+  "performance_targets": {
+    "voip_jitter": "<30ms (G.722 codec requirement)",
+    "verkada_upload_health": "Green status in Command dashboard",
+    "google_meet_quality": "720p HD with <50ms latency",
+    "guest_throttle_effectiveness": "No complaints from staff about guest bandwidth usage"
+  },
+  
+  "references": [
+    "ADR-002: VLAN Architecture and QoS requirements",
+    "Smart Queues: UniFi Help - Traffic Management",
+    "DSCP Standards: RFC 2474, RFC 3246",
+    "Verkada Bandwidth: Verkada Support - Bandwidth Calculator"
+  ]
+}

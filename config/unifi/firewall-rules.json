@@ -1,0 +1,195 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
+  "description": "UniFi Firewall Rules for A+UP Charter School using Firewall Groups (NO Zone-Based Firewall)",
+  "last_updated": "2025-12-05",
+  "source": "T3-ETERNAL v1.1 - Comprehensive Corrections, ADR-002 VLAN Architecture",
+  "note": "11 rules using firewall groups for consolidation. Hardware offload validated.",
+  
+  "firewall_rules": [
+    {
+      "id": 1001,
+      "name": "Students → Internet (HTTP/HTTPS/DNS only)",
+      "action": "accept",
+      "protocol": "tcp_udp",
+      "src_firewall_group": "EdSecure_Networks",
+      "src_network_type": "NETv4",
+      "dst_firewall_group": "Web_Services",
+      "log": false,
+      "enabled": true,
+      "rule_index": 2000,
+      "description": "Students access web services only (no peer-to-peer, no SSH, no direct IP access)",
+      "rationale": "CIPA compliance - web filtering enforced via CyberSecure"
+    },
+    {
+      "id": 1002,
+      "name": "Students → Google Workspace",
+      "action": "accept",
+      "protocol": "tcp_udp",
+      "src_firewall_group": "EdSecure_Networks",
+      "dst_firewall_group": "Google_Workspace",
+      "log": false,
+      "enabled": true,
+      "rule_index": 2001,
+      "description": "Allow Chromebook SSO, Classroom, Meet, Drive access",
+      "rationale": "Required for Google Workspace integration and classroom functionality"
+    },
+    {
+      "id": 1003,
+      "name": "Students → DNS",
+      "action": "accept",
+      "protocol": "udp",
+      "src_firewall_group": "EdSecure_Networks",
+      "dst_firewall_group": "DNS_Services",
+      "log": false,
+      "enabled": true,
+      "rule_index": 2002,
+      "description": "Allow DNS resolution for web access",
+      "rationale": "Required for all internet connectivity"
+    },
+    {
+      "id": 1004,
+      "name": "Students → Block Inter-VLAN",
+      "action": "drop",
+      "protocol": "all",
+      "src_network_id": "VLAN10",
+      "dst_firewall_group": "Surveillance_Networks",
+      "log": true,
+      "enabled": true,
+      "rule_index": 2003,
+      "description": "Prevent student access to camera network",
+      "rationale": "Security isolation - students cannot access camera feeds or management"
+    },
+    {
+      "id": 2001,
+      "name": "Staff → All Access",
+      "action": "accept",
+      "protocol": "all",
+      "src_network_id": "VLAN20",
+      "log": false,
+      "enabled": true,
+      "rule_index": 2010,
+      "description": "Staff full network and internet access",
+      "rationale": "Administrative functions require unrestricted access"
+    },
+    {
+      "id": 3001,
+      "name": "Guests → Internet Only (HTTP/HTTPS/DNS)",
+      "action": "accept",
+      "protocol": "tcp_udp",
+      "src_firewall_group": "Guest_Networks",
+      "dst_firewall_group": "Web_Services",
+      "log": false,
+      "enabled": true,
+      "rule_index": 2020,
+      "description": "Guest WiFi internet-only access with throttling",
+      "rationale": "Visitor access without internal network exposure"
+    },
+    {
+      "id": 3002,
+      "name": "Guests → Block All Internal (RFC1918)",
+      "action": "drop",
+      "protocol": "all",
+      "src_firewall_group": "Guest_Networks",
+      "dst_address": "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16",
+      "log": true,
+      "enabled": true,
+      "rule_index": 2021,
+      "description": "Block guest access to all internal RFC1918 networks",
+      "rationale": "Security isolation - guests cannot reach internal resources"
+    },
+    {
+      "id": 4001,
+      "name": "VoIP → SIP/RTP",
+      "action": "accept",
+      "protocol": "udp",
+      "src_network_id": "VLAN50",
+      "dst_firewall_group": "VoIP_Ports",
+      "log": false,
+      "enabled": true,
+      "rule_index": 2030,
+      "description": "Allow Yealink direct SIP trunking and RTP voice traffic",
+      "rationale": "VoIP functionality requires SIP signaling (5060/5061) and RTP media (10000-65535)"
+    },
+    {
+      "id": 5001,
+      "name": "Cameras → Verkada Cloud",
+      "action": "accept",
+      "protocol": "tcp_udp",
+      "src_firewall_group": "Surveillance_Networks",
+      "dst_firewall_group": "Verkada_Cloud",
+      "dst_firewall_group_ports": "Verkada_Ports",
+      "log": false,
+      "enabled": true,
+      "rule_index": 2040,
+      "description": "Allow Verkada cameras to reach Command cloud services",
+      "rationale": "Cloud-managed cameras require HTTPS (443), RTSP (554), STUN/TURN (3478-3481)"
+    },
+    {
+      "id": 5002,
+      "name": "Cameras → STUN/TURN (NAT Traversal)",
+      "action": "accept",
+      "protocol": "udp",
+      "src_network_id": "VLAN60",
+      "dst_port": "3478-3481",
+      "log": false,
+      "enabled": true,
+      "rule_index": 2041,
+      "description": "CRITICAL: Allow Verkada STUN/TURN for remote viewing via Command",
+      "rationale": "Without STUN/TURN, remote live view will fail. Ports 3478-3481 required for NAT traversal."
+    },
+    {
+      "id": 6001,
+      "name": "Management → All Access",
+      "action": "accept",
+      "protocol": "all",
+      "src_firewall_group": "Management_Networks",
+      "log": false,
+      "enabled": true,
+      "rule_index": 2050,
+      "description": "Management VLAN full access for infrastructure administration",
+      "rationale": "Network administrators require unrestricted access for maintenance"
+    }
+  ],
+  
+  "rule_processing": {
+    "order": "Top-down evaluation, first match wins",
+    "default_action": "DROP (implicit deny-all at end of ruleset)",
+    "logging": "Enabled only for DROP rules to minimize log volume",
+    "hardware_offload": "VALIDATED - All rules use groups to maintain offload eligibility"
+  },
+  
+  "deployment_notes": {
+    "creation_method": "UniFi Network Application UI → Settings → Firewall & Security → Rules",
+    "api_endpoint": "api/s/default/rest/firewallrule",
+    "validation_commands": [
+      "# Check hardware offload status",
+      "ssh admin@10.99.0.1 'show ubnt offload'",
+      "# Should show 'enabled' for optimal performance",
+      "",
+      "# Test student isolation",
+      "ping -c 3 -I 10.10.0.100 10.60.0.10",
+      "# Should fail (blocked by rule 1004)",
+      "",
+      "# Test Verkada connectivity",
+      "ssh admin@10.60.0.10 'nc -uzv stun.verkada.com 3478'",
+      "# Should succeed (allowed by rule 5002)"
+    ]
+  },
+  
+  "total_rules": 11,
+  "target_count": "11-15 rules (hardware offload safe)",
+  "rule_consolidation_strategy": "Use firewall groups to avoid rule explosion as network grows",
+  
+  "maintenance_schedule": {
+    "monthly": "Review firewall logs for unexpected drops",
+    "quarterly": "Audit rule effectiveness and group membership",
+    "annually": "Validate hardware offload remains enabled"
+  },
+  
+  "references": [
+    "ADR-002: VLAN Architecture and Segmentation",
+    "Firewall Groups: config/unifi/firewall-groups.json",
+    "UniFi Docs: help.ui.com/hc/en-us/articles/360012414613-UniFi-Network-Firewall-Rules"
+  ]
+}

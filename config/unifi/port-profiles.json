@@ -1,0 +1,254 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
+  "description": "UniFi Port Profile Configuration for A+UP Charter School - 10G LACP trunk + PoE management",
+  "last_updated": "2025-12-05",
+  "source": "T3-ETERNAL v1.1 - Comprehensive Corrections",
+  
+  "port_profiles": [
+    {
+      "name": "10G-Trunk-LACP",
+      "description": "10G LACP trunk between UDM Pro Max and USW-Pro-Max-48-PoE",
+      "port_profile_type": "trunk",
+      "native_network": "VLAN99",
+      "tagged_networks": [
+        "VLAN10",
+        "VLAN20",
+        "VLAN30",
+        "VLAN50",
+        "VLAN60",
+        "VLAN99"
+      ],
+      "lacp_enabled": true,
+      "lacp_mode": "802.3ad",
+      "link_aggregation": {
+        "udm_ports": ["SFP+ Port 8", "SFP+ Port 9"],
+        "usw_ports": ["Port 9 (SFP+)", "Port 10 (SFP+)"],
+        "bond_interface": "bond0",
+        "hash_policy": "layer3+4"
+      },
+      "speed_duplex": "10000FDX",
+      "jumbo_frames": false,
+      "stp": {
+        "enabled": true,
+        "priority": 16384,
+        "edge_port": false,
+        "note": "STP prevents loops, priority 16384 makes UDM root bridge"
+      },
+      "applied_to": [
+        "UDM Pro Max: SFP+ 8-9",
+        "USW-Pro-Max-48-PoE: Ports 9-10"
+      ],
+      "validation": [
+        "# Check LACP bond status on USW",
+        "ssh admin@10.99.0.2 'show interfaces bonding bond0'",
+        "# Should show '802.3ad' and both members active",
+        "",
+        "# Test VLAN connectivity across trunk",
+        "for VLAN in 10 20 30 50 60 99; do",
+        "  ping -c 1 -W 2 10.$VLAN.0.1 && echo 'VLAN $VLAN: OK' || echo 'VLAN $VLAN: FAIL'",
+        "done",
+        "",
+        "# Monitor trunk utilization",
+        "ssh admin@10.99.0.2 'show interfaces counters' | grep bond0"
+      ],
+      "rationale": "10G trunk provides 20 Gbps aggregate bandwidth (2× 10G LACP) for inter-VLAN routing and WAN backhaul. Eliminates 1G bottleneck with 16 APs, 8 phones, 11 cameras."
+    },
+    {
+      "name": "Access-Point-PoE",
+      "description": "PoE+ profile for UAP-AC-PRO access points",
+      "port_profile_type": "access",
+      "native_network": "VLAN99",
+      "poe_mode": "auto",
+      "poe_power_budget_watts": 15,
+      "speed_duplex": "1000FDX",
+      "stp": {
+        "enabled": true,
+        "edge_port": true,
+        "bpdu_guard": true
+      },
+      "storm_control": {
+        "broadcast_enabled": true,
+        "multicast_enabled": true,
+        "broadcast_rate_pps": 100,
+        "multicast_rate_pps": 100,
+        "note": "Prevents mDNS/ARP floods from Chromebooks"
+      },
+      "applied_to": "USW Ports 1-16",
+      "devices": "16× UAP-AC-PRO",
+      "validation": [
+        "# Check PoE status for AP ports",
+        "ssh admin@10.99.0.2 'show poe ports 1-16'",
+        "# Verify all ports show ~15W per AP",
+        "",
+        "# Test AP adoption",
+        "unifi-api-client list-devices --type uap | jq '.[] | {name, state}'",
+        "# All APs should show 'state: adopted'"
+      ]
+    },
+    {
+      "name": "VoIP-Phone-PoE",
+      "description": "PoE profile for Yealink T43U SIP phones",
+      "port_profile_type": "access",
+      "native_network": "VLAN50",
+      "poe_mode": "auto",
+      "poe_power_budget_watts": 7,
+      "speed_duplex": "1000FDX",
+      "stp": {
+        "enabled": true,
+        "edge_port": true,
+        "bpdu_guard": true
+      },
+      "qos": {
+        "802_1p_priority": 5,
+        "dscp_marking": 46,
+        "note": "EF marking for VoIP traffic"
+      },
+      "applied_to": "USW Ports 17-24",
+      "devices": "8× Yealink T43U",
+      "validation": [
+        "# Check PoE status for phone ports",
+        "ssh admin@10.99.0.2 'show poe ports 17-24'",
+        "# Verify ~7W per phone",
+        "",
+        "# Test phone registration",
+        "curl http://10.50.0.10/cgi-bin/ConfigManApp.com?key=SystemStatus",
+        "# Check SIP registration status"
+      ]
+    },
+    {
+      "name": "Camera-PoE-Plus",
+      "description": "PoE+ profile for Verkada cameras",
+      "port_profile_type": "access",
+      "native_network": "VLAN60",
+      "poe_mode": "auto",
+      "poe_power_budget_watts": 12,
+      "speed_duplex": "1000FDX",
+      "stp": {
+        "enabled": true,
+        "edge_port": true,
+        "bpdu_guard": true
+      },
+      "applied_to": "USW Ports 25-39",
+      "devices": "11× Verkada cameras (CD52/CD62) + 4 spares",
+      "validation": [
+        "# Check PoE status for camera ports",
+        "ssh admin@10.99.0.2 'show poe ports 25-39'",
+        "# Verify ~12W per camera",
+        "",
+        "# Test Verkada cloud connectivity",
+        "scripts/validate-verkada-connectivity.sh",
+        "# All cameras should show online in Command dashboard"
+      ]
+    },
+    {
+      "name": "Uplink-NoPoE",
+      "description": "Non-PoE profile for uplinks and spares",
+      "port_profile_type": "access",
+      "native_network": "VLAN99",
+      "poe_mode": "off",
+      "speed_duplex": "1000FDX",
+      "stp": {
+        "enabled": true,
+        "edge_port": false
+      },
+      "applied_to": "USW Ports 40-48",
+      "devices": "UPS monitoring, spare uplinks, future expansion",
+      "note": "PoE disabled to conserve power budget for critical devices"
+    }
+  ],
+  
+  "poe_budget_allocation": {
+    "usw_total_budget_watts": 720,
+    "port_allocations": {
+      "ports_1_16_aps": {
+        "device_count": 16,
+        "watts_per_device": 15,
+        "total_watts": 240,
+        "percentage": "33.3%"
+      },
+      "ports_17_24_phones": {
+        "device_count": 8,
+        "watts_per_device": 7,
+        "total_watts": 56,
+        "percentage": "7.8%"
+      },
+      "ports_25_39_cameras": {
+        "device_count": 11,
+        "watts_per_device": 12,
+        "total_watts": 132,
+        "percentage": "18.3%"
+      },
+      "reserved_spare": {
+        "watts": 50,
+        "note": "Wildcard devices, intercom, future expansion"
+      }
+    },
+    "steady_state_total_watts": 478,
+    "steady_state_percentage": "66.4%",
+    "inrush_multiplier": 2.5,
+    "inrush_total_watts": 1195,
+    "inrush_status": "⚠️ EXCEEDS BUDGET (1195W > 720W)",
+    "mitigation": "Run scripts/staggered-poe-boot.sh after power restoration to prevent inrush overload",
+    "alert_thresholds": {
+      "yellow": "600W (83%)",
+      "red": "680W (94%)"
+    }
+  },
+  
+  "lacp_trunk_configuration": {
+    "implementation_steps": [
+      "1. Create port profile '10G-Trunk-LACP' in UniFi UI",
+      "2. Apply profile to USW ports 9-10",
+      "3. SSH to USW and configure bond0:",
+      "   configure",
+      "   set interfaces bonding bond0 mode 802.3ad",
+      "   set interfaces bonding bond0 member interface eth9",
+      "   set interfaces bonding bond0 member interface eth10",
+      "   commit; save",
+      "4. SSH to UDM and configure bond1:",
+      "   configure",
+      "   set interfaces bonding bond1 mode 802.3ad",
+      "   set interfaces bonding bond1 member interface eth8",
+      "   set interfaces bonding bond1 member interface eth9",
+      "   commit; save",
+      "5. Validate LACP formation: show interfaces bonding",
+      "6. Test VLAN connectivity: ping all VLAN gateways"
+    ],
+    "vlan_subinterfaces": {
+      "bond0_vif_10": "10.10.0.2/23",
+      "bond0_vif_20": "10.20.0.2/24",
+      "bond0_vif_30": "10.30.0.2/24",
+      "bond0_vif_50": "10.50.0.2/27",
+      "bond0_vif_60": "10.60.0.2/26",
+      "bond0_vif_99": "10.99.0.2/28"
+    },
+    "failover_behavior": "If one 10G link fails, bond0 continues on single 10G link (graceful degradation)"
+  },
+  
+  "deployment_script": "scripts/configure-10g-trunk.sh",
+  
+  "maintenance_schedule": {
+    "monthly": "Review PoE utilization: scripts/calculate-poe-budget.sh",
+    "quarterly": "Validate LACP bond health: show interfaces bonding bond0",
+    "annually": "Test staggered boot script after UPS maintenance"
+  },
+  
+  "validation_checklist": [
+    "✓ LACP bond0 formed on USW (2× 10G members)",
+    "✓ All 6 VLANs reachable via trunk",
+    "✓ PoE budget <600W yellow threshold",
+    "✓ AP ports show ~15W each",
+    "✓ Phone ports show ~7W each",
+    "✓ Camera ports show ~12W each",
+    "✓ STP root bridge: UDM Pro Max (priority 16384)",
+    "✓ Storm control active on AP ports (100 pps broadcast/multicast)"
+  ],
+  
+  "references": [
+    "LACP Configuration: scripts/configure-10g-trunk.sh",
+    "PoE Budget Calculation: scripts/calculate-poe-budget.sh",
+    "Staggered Boot: scripts/staggered-poe-boot.sh",
+    "UniFi Docs: help.ui.com/hc/en-us/articles/360008365334-UniFi-Link-Aggregation"
+  ]
+}

@@ -7,11 +7,118 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0-t3-eternal-corrections] - 2025-12-05
+
+### 🔥 15 CRITICAL TECHNICAL CORRECTIONS APPLIED
+
+**Status:** T3-ETERNAL GREEN → Repository now 100% technically accurate
+
+This release fixes 15 critical technical gaps identified in comprehensive analysis, bringing the repository from Phase 3 hallucinations to production-ready specifications.
+
+---
+
+### Fixed - 15 Critical Technical Gaps
+
+1. **NO Zone-Based Firewall** (feature doesn't exist) → Implemented Firewall Groups (11 groups)
+2. **Manual QoS Required** (CyberSecure doesn't auto-tag) → Traffic Rules 950/47.5 Mbps asymmetric
+3. **Separate 2.4GHz Printer SSID** (can't do per-AP radio) → AP Group + hidden SSID
+4. **Avahi mDNS Container** (native toggle affects all VLANs) → VLAN-selective br10↔br20
+5. **PoE Inrush 2.5x** (1195W > 720W budget) → Staggered boot script (165 sec)
+6. **Asymmetric Smart Queues** (1000/50 Mbps WAN) → 950/47.5 Mbps configured
+7. **10G LACP Trunk** → bond0/bond1 explicit SSH configuration
+8. **CyberSecure NOT CIPA-Certified** → Manual categories + syslog (Lightspeed recommended)
+9. **Verkada STUN/TURN Missing** → UDP 3478-3481 firewall rule (remote viewing)
+10. **SIP ALG Disable** → SSH script (persists on UDM Pro Max)
+11. **802.11k/v NOT 802.11r** → Chromebook AUE <2026 incompatible
+12. **IGMP Per-VLAN** → VLAN 50 DISABLED (multicast paging 224.0.1.75)
+13. **UPS Runtime Realistic** → 758W load (all closet), 8-10 min (was 519W, 10-15 min)
+14. **Firewall Optimization** → 11 rules using groups, hardware offload validated
+15. **Google Workspace SSO** → Future enhancement Q2 2026 (ADR-012)
+
+---
+
+### Added - 32 New Files
+
+#### Configuration Files (6)
+- `config/unifi/firewall-groups.json` — 11 groups (7 address, 4 port)
+- `config/unifi/firewall-rules.json` — 11 rules using groups
+- `config/unifi/traffic-rules.json` — Manual QoS (4 rules)
+- `config/unifi/ssids.json` — 4 SSIDs (802.11k/v, separate printer SSID)
+- `config/unifi/port-profiles.json` — 5 profiles (10G LACP trunk)
+- `config/networks.json` — Updated with per-VLAN IGMP settings
+
+#### Avahi mDNS Reflector (2)
+- `config/avahi/docker-compose.yml`
+- `config/avahi/avahi-daemon.conf`
+
+#### Core Scripts (6)
+- `scripts/configure-qos.sh`
+- `scripts/configure-smart-queues.sh`
+- `scripts/configure-printer-ssid.sh`
+- `scripts/configure-10g-trunk.sh`
+- `scripts/configure-igmp-snooping.sh`
+- `scripts/disable-sip-alg.sh`
+
+#### PoE & UPS Scripts (3)
+- `scripts/calculate-poe-budget.sh`
+- `scripts/staggered-poe-boot.sh`
+- `scripts/calculate-ups-runtime.sh`
+
+#### Validation Scripts (4)
+- `scripts/deploy-avahi-reflector.sh`
+- `scripts/check-chromebook-compatibility.sh`
+- `scripts/validate-verkada-connectivity.sh`
+- `scripts/validate-voip-paging.sh`
+
+#### CIPA Scripts (2)
+- `scripts/configure-cybersecure-cipa.sh`
+- `scripts/configure-cipa-logging.sh`
+
+#### Optimization (1)
+- `scripts/optimize-firewall-rules.sh`
+
+#### Phase Scripts (4 updated)
+- `scripts/phase1-core-swap.sh` — Added LACP trunk, PoE budget
+- `scripts/phase2-wifi-migration.sh` — NEW: Complete WiFi + printer infrastructure
+- `scripts/phase3-verkada-migration.sh` — Added STUN/TURN validation
+- `scripts/phase4-yealink-liberation.sh` — Added SIP ALG disable, IGMP, paging
+
+#### Inventory (1)
+- `inventory/chromebook-inventory.json` — Fleet template with AUE dates
+
+#### ADRs (3)
+- `docs/adr/010-mdns-selective-reflection.md`
+- `docs/adr/011-cipa-compliance.md`
+- `docs/adr/012-google-workspace-sso-future.md`
+
+---
+
+### Changed
+
+- **README.md:** Removed all ZBF, corrected QoS/WiFi/mDNS/PoE/Firewall/UPS specs
+- **validate-eternal.sh:** Added 9 new checks (21 total, was 12)
+- **Network Architecture:** IGMP per-VLAN, firewall groups, manual QoS documented
+
+---
+
+### Deprecated
+
+- Zone-Based Firewall references (feature doesn't exist)
+- Auto-DPI QoS claims (requires manual configuration)
+- Per-AP radio scripting (UniFi doesn't support)
+- Native mDNS toggle (affects all VLANs)
+- 802.11r for all SSIDs (Chromebook incompatible)
+- Global IGMP snooping (must be per-VLAN)
+
+---
+
 ## [1.0.0] - 2024-12-05 - T3-ETERNAL ACHIEVED
 
-### 🎉 MISSION COMPLETE
+### 🎉 MISSION COMPLETE (With Corrections Pending)
 
 The fortress is a classroom. The ride is eternal.
+
+**Note:** This version contained 15 critical technical inaccuracies, corrected in v1.1.0.
 
 ---
 

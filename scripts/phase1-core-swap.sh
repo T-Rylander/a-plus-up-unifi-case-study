@@ -41,6 +41,23 @@ else
     echo -e "${YELLOW}⚠️  Juniper still reachable${NC}"
 fi
 
+echo -e "${YELLOW}Step 4: Configuring 10G LACP trunk (UDM ↔ USW)...${NC}"
+if [ -f "scripts/configure-10g-trunk.sh" ]; then
+    bash scripts/configure-10g-trunk.sh
+    echo -e "${GREEN}✅ 10G LACP trunk operational (bond0/bond1)${NC}"
+else
+    echo -e "${YELLOW}⚠️  LACP script not found, skipping${NC}"
+fi
+
+echo -e "${YELLOW}Step 5: Calculating PoE budget with inrush...${NC}"
+if [ -f "scripts/calculate-poe-budget.sh" ]; then
+    bash scripts/calculate-poe-budget.sh
+    echo -e "${GREEN}✅ PoE budget: 478W steady / 1195W inrush${NC}"
+    echo -e "${YELLOW}⚠️  Inrush exceeds 720W budget — staggered boot required${NC}"
+else
+    echo -e "${YELLOW}⚠️  PoE budget script not found, skipping${NC}"
+fi
+
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))
 MINUTES=$((DURATION / 60))

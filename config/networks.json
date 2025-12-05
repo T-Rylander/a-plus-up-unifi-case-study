@@ -49,6 +49,11 @@
         "enabled": true,
         "rssi_threshold_dbm": -70,
         "preference_band": "5GHz"
+      },
+      "igmp_snooping": {
+        "enabled": true,
+        "querier": true,
+        "rationale": "Prevents Chromebook mDNS/Bonjour multicast floods. IGMP snooping limits multicast traffic to subscribed ports only."
       }
     },
     {
@@ -102,6 +107,11 @@
         "printer_vlan": true,
         "printer_count": 40,
         "printer_ip_range": "10.20.0.50-10.20.0.99"
+      },
+      "igmp_snooping": {
+        "enabled": true,
+        "querier": true,
+        "rationale": "Prevents printer broadcast storms. Avahi container provides VLAN 10↔20 selective mDNS reflection."
       }
     },
     {
@@ -151,6 +161,11 @@
         "enabled": true,
         "rssi_threshold_dbm": -67,
         "preference_band": "5GHz"
+      },
+      "igmp_snooping": {
+        "enabled": true,
+        "querier": true,
+        "rationale": "Prevents guest multicast floods to internal networks."
       }
     },
     {
@@ -204,6 +219,11 @@
         "backup_server": "backup.sip.spectrum.com",
         "srtp_enabled": true,
         "codec": "G.722"
+      },
+      "igmp_snooping": {
+        "enabled": false,
+        "querier": false,
+        "rationale": "CRITICAL: IGMP snooping DISABLED for VLAN 50. Required for multicast paging (224.0.1.75) to function. Yealink phones use multicast for PA announcements."
       }
     },
     {
@@ -252,6 +272,11 @@
         "recording_quality": "High (1080p/1440p)",
         "person_detection": true,
         "cloud_replication": "AWS (multi-region)"
+      },
+      "igmp_snooping": {
+        "enabled": true,
+        "querier": true,
+        "rationale": "Prevents camera multicast traffic from flooding switch ports."
       }
     },
     {
@@ -294,9 +319,24 @@
         "ssh_authorized_ips": ["10.20.0.0/24", "external_VPN_IP"],
         "ssh_key_required": true,
         "https_certificate": "Self-signed (internal trusted)"
+      },
+      "igmp_snooping": {
+        "enabled": true,
+        "querier": true,
+        "rationale": "Management network multicast control for monitoring protocols (SNMP traps, syslog)."
       }
     }
   ],
+  "igmp_summary": {
+    "vlan10_students": "ENABLED - Prevents Chromebook multicast floods",
+    "vlan20_staff": "ENABLED - Printer discovery via Avahi container (not native mDNS)",
+    "vlan30_guest": "ENABLED - Isolates guest multicast traffic",
+    "vlan50_voip": "DISABLED - Required for multicast paging (224.0.1.75)",
+    "vlan60_cameras": "ENABLED - Limits camera multicast traffic",
+    "vlan99_management": "ENABLED - Controls monitoring protocol multicast",
+    "configuration_script": "scripts/configure-igmp-snooping.sh",
+    "validation_script": "scripts/validate-voip-paging.sh"
+  },
   "summary": {
     "total_vlans": 6,
     "total_hosts": 1184,

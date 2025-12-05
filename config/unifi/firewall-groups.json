@@ -1,0 +1,183 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
+  "description": "UniFi Firewall Groups for A+UP Charter School - Address and port group consolidation (NO Zone-Based Firewall - feature does not exist in UniFi)",
+  "last_updated": "2025-12-05",
+  "source": "T3-ETERNAL v1.1 - Comprehensive Corrections",
+  "note": "UniFi does NOT have Zone-Based Firewalls. Use address-group and port-group for rule consolidation.",
+  
+  "firewall_groups": [
+    {
+      "name": "EdSecure_Networks",
+      "type": "address-group",
+      "description": "Educational networks requiring content filtering and monitoring",
+      "members": [
+        "10.10.0.0/23",
+        "10.20.0.0/24"
+      ],
+      "usage": [
+        "Student Chromebooks (VLAN 10)",
+        "Staff workstations and printers (VLAN 20)"
+      ]
+    },
+    {
+      "name": "Surveillance_Networks",
+      "type": "address-group",
+      "description": "Camera networks requiring isolation from general use",
+      "members": [
+        "10.60.0.0/26"
+      ],
+      "usage": [
+        "Verkada cameras (VLAN 60)"
+      ]
+    },
+    {
+      "name": "Guest_Networks",
+      "type": "address-group",
+      "description": "Guest WiFi network with throttled internet-only access",
+      "members": [
+        "10.30.0.0/24"
+      ],
+      "usage": [
+        "Visitor WiFi (VLAN 30)"
+      ]
+    },
+    {
+      "name": "VoIP_Networks",
+      "type": "address-group",
+      "description": "Voice traffic network requiring QoS priority",
+      "members": [
+        "10.50.0.0/27"
+      ],
+      "usage": [
+        "Yealink SIP phones (VLAN 50)"
+      ]
+    },
+    {
+      "name": "Management_Networks",
+      "type": "address-group",
+      "description": "Network infrastructure management",
+      "members": [
+        "10.99.0.0/28"
+      ],
+      "usage": [
+        "UniFi gateway, switch, APs (VLAN 99)"
+      ]
+    },
+    {
+      "name": "Google_Workspace",
+      "type": "address-group",
+      "description": "Google Workspace services for Chromebook authentication and classroom apps",
+      "members": [
+        "*.google.com",
+        "*.googleapis.com",
+        "*.gstatic.com",
+        "*.googleusercontent.com",
+        "*.classroom.google.com",
+        "*.meet.google.com"
+      ],
+      "usage": [
+        "SSO authentication",
+        "Google Classroom",
+        "Google Meet video conferencing"
+      ]
+    },
+    {
+      "name": "Verkada_Cloud",
+      "type": "address-group",
+      "description": "Verkada Command cloud services for camera management and live view",
+      "members": [
+        "*.verkada.com",
+        "*.command.verkada.com",
+        "api.verkada.com",
+        "vstream.verkada.com"
+      ],
+      "usage": [
+        "Camera cloud recording",
+        "Command dashboard access",
+        "Live view streaming"
+      ]
+    },
+    {
+      "name": "VoIP_Ports",
+      "type": "port-group",
+      "description": "SIP and RTP port ranges for Yealink direct SIP trunking",
+      "members": [
+        "5060",
+        "5061",
+        "10000-65535"
+      ],
+      "protocols": ["udp", "tcp"],
+      "usage": [
+        "SIP signaling (5060/5061)",
+        "RTP voice traffic (10000-65535 dynamic range)"
+      ]
+    },
+    {
+      "name": "Verkada_Ports",
+      "type": "port-group",
+      "description": "Verkada cloud connectivity and STUN/TURN for NAT traversal",
+      "members": [
+        "443",
+        "554",
+        "3478",
+        "3479",
+        "3480",
+        "3481"
+      ],
+      "protocols": ["tcp", "udp"],
+      "usage": [
+        "HTTPS API (443)",
+        "RTSP streaming (554)",
+        "STUN/TURN NAT traversal (3478-3481) - CRITICAL for remote viewing"
+      ]
+    },
+    {
+      "name": "DNS_Services",
+      "type": "port-group",
+      "description": "DNS resolution ports",
+      "members": [
+        "53"
+      ],
+      "protocols": ["udp", "tcp"],
+      "usage": [
+        "Standard DNS queries"
+      ]
+    },
+    {
+      "name": "Web_Services",
+      "type": "port-group",
+      "description": "HTTP and HTTPS web traffic",
+      "members": [
+        "80",
+        "443"
+      ],
+      "protocols": ["tcp"],
+      "usage": [
+        "Standard web browsing"
+      ]
+    }
+  ],
+  
+  "deployment_notes": {
+    "creation_method": "UniFi Network Application UI → Settings → Firewall & Security → Groups",
+    "api_endpoint": "api/s/default/rest/firewallgroup",
+    "validation": [
+      "Verify all groups appear in firewall rule dropdown menus",
+      "Test rule application order (top-down processing)",
+      "Confirm hardware offload remains enabled after group creation"
+    ],
+    "maintenance": [
+      "Review group membership quarterly",
+      "Update Google/Verkada domains if services change",
+      "Keep port groups aligned with vendor specifications"
+    ]
+  },
+  
+  "rule_consolidation_benefit": {
+    "before": "15-20 individual rules with IP addresses hardcoded",
+    "after": "11 rules using groups for maintainability",
+    "hardware_offload": "Maintained (critical for UDM Pro Max performance)",
+    "audit_clarity": "Named groups make intent clear in logs"
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0",
+  "description": "A+UP Charter School Chromebook Inventory - AUE dates for 802.11r compatibility check",
+  "last_updated": "2025-12-05",
+  "source": "Google Admin Console → Devices → Chrome → Devices",
+  
+  "chromebooks": [
+    {
+      "model": "Acer Chromebook 11 C732",
+      "aue_date": "2024-06-01",
+      "count": 25,
+      "purchase_year": 2018,
+      "802_11r_support": false,
+      "notes": "Older model, AUE expired. Requires 802.11k/v only (no 802.11r)"
+    },
+    {
+      "model": "HP Chromebook 14 G5",
+      "aue_date": "2026-06-01",
+      "count": 75,
+      "purchase_year": 2020,
+      "802_11r_support": true,
+      "notes": "Modern model, 802.11r supported"
+    },
+    {
+      "model": "Dell Chromebook 3100",
+      "aue_date": "2027-08-01",
+      "count": 35,
+      "purchase_year": 2021,
+      "802_11r_support": true,
+      "notes": "Rugged model for elementary students"
+    },
+    {
+      "model": "Lenovo ThinkPad 11e Chromebook",
+      "aue_date": "2025-11-01",
+      "count": 15,
+      "purchase_year": 2019,
+      "802_11r_support": false,
+      "notes": "Borderline AUE, may have 802.11r issues"
+    }
+  ],
+  
+  "summary": {
+    "total_chromebooks": 150,
+    "models": 4,
+    "aue_before_2026": 40,
+    "aue_2026_or_later": 110,
+    "802_11r_incompatible": 40,
+    "802_11r_compatible": 110,
+    "incompatible_percentage": 26.7
+  },
+  
+  "recommendations": {
+    "ssid_configuration": {
+      "student_wifi": {
+        "802_11k": true,
+        "802_11v": true,
+        "802_11r": false,
+        "rationale": "26.7% fleet incompatible with 802.11r. Use 802.11k/v for maximum compatibility."
+      },
+      "staff_secure": {
+        "802_11k": true,
+        "802_11v": true,
+        "802_11r": true,
+        "rationale": "Staff devices (2020+ laptops) support 802.11r for fast roaming."
+      }
+    },
+    "pilot_testing": {
+      "phase": "Week 1",
+      "devices": 10,
+      "mix": "5× pre-2020 models + 5× 2020+ models",
+      "tests": [
+        "Association time: <5 seconds",
+        "Roaming between APs: <200ms handoff",
+        "Google Meet call continuity during roaming",
+        "No unexpected disconnects over 1 week"
+      ]
+    },
+    "fleet_refresh": {
+      "phase_out_aue_2024": "Immediate (2025-2026 school year)",
+      "phase_out_aue_2025": "2026-2027 school year",
+      "target_aue_2028_plus": "Enable 802.11r after 2027 refresh",
+      "budget": "$200-300 per device × 40 devices = $8,000-12,000"
+    }
+  },
+  
+  "aue_database": {
+    "url": "https://support.google.com/chrome/a/answer/6220366",
+    "description": "Google's official Auto Update Expiration dates for Chrome OS devices",
+    "update_frequency": "Quarterly",
+    "note": "AUE dates may change - verify in Google Admin Console before deployment"
+  },
+  
+  "validation_script": "scripts/check-chromebook-compatibility.sh",
+  
+  "data_collection": {
+    "method": "Export from Google Admin Console",
+    "steps": [
+      "1. Login to admin.google.com",
+      "2. Navigate: Devices → Chrome → Devices",
+      "3. Export: Download CSV",
+      "4. Parse: Group by model, count devices, note AUE dates",
+      "5. Update: inventory/chromebook-inventory.json"
+    ],
+    "frequency": "Quarterly (sync with Chromebook procurement)"
+  },
+  
+  "notes": [
+    "This is a TEMPLATE - replace with actual school inventory",
+    "AUE dates from Google Admin Console are authoritative",
+    "802.11r support generally correlates with AUE >= 2026 (2020+ models)",
+    "Pre-2020 models (AUE <2026) may disconnect or fail to roam with 802.11r enabled"
+  ]
+}
