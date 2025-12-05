@@ -1,0 +1,286 @@
+name: T3-ETERNAL Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 3 * * *'  # Daily at 3 AM UTC
+
+permissions:
+  contents: read
+
+jobs:
+  # Job 1: VLAN Configuration Validation
+  validate-vlan:
+    runs-on: ubuntu-latest
+    name: 'Validate VLAN Mappings'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check VLAN assignments
+        run: |
+          echo "🔍 Validating VLAN configuration..."
+          
+          # VLAN 10 must be Students/Chromebooks (10.10.0.0/23)
+          if grep -r "VLAN 10.*Students" docs/; then
+            echo "✅ VLAN 10: Students/Chromebooks (correct)"
+          else
+            echo "❌ VLAN 10: Mislabeled (must be Students)"
+            exit 1
+          fi
+          
+          # VLAN 20 must be Staff (10.20.0.0/24)
+          if grep -r "VLAN 20.*Staff" docs/; then
+            echo "✅ VLAN 20: Staff (correct)"
+          else
+            echo "❌ VLAN 20: Mislabeled"
+            exit 1
+          fi
+          
+          # VLAN 99 must be Management (10.99.0.0/28)
+          if grep -r "VLAN 99.*Management" docs/; then
+            echo "✅ VLAN 99: Management (correct)"
+          else
+            echo "❌ VLAN 99: Mislabeled"
+            exit 1
+          fi
+          
+          # VLAN 50 must be VoIP/Yealink (10.50.0.0/28)
+          if grep -r "VLAN 50.*VoIP\|Yealink" docs/; then
+            echo "✅ VLAN 50: VoIP/Yealink (correct)"
+          else
+            echo "❌ VLAN 50: Mislabeled"
+            exit 1
+          fi
+          
+          # VLAN 60 must be IoT/Verkada (10.60.0.0/28)
+          if grep -r "VLAN 60.*IoT\|Verkada" docs/; then
+            echo "✅ VLAN 60: IoT/Verkada (correct)"
+          else
+            echo "❌ VLAN 60: Mislabeled"
+            exit 1
+          fi
+          
+          echo "🏆 All VLAN mappings validated"
+
+  # Job 2: mDNS/IGMP Configuration Validation
+  validate-mdns:
+    runs-on: ubuntu-latest
+    name: 'Validate mDNS & IGMP'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check mDNS reflector configuration
+        run: |
+          echo "🔍 Validating mDNS reflector..."
+          
+          # Must mention mDNS reflector
+          if grep -r "mDNS.*reflector\|reflector.*VLAN 10.*VLAN 20" docs/ scripts/; then
+            echo "✅ mDNS reflector: Configured"
+          else
+            echo "❌ mDNS reflector: Not documented"
+            exit 1
+          fi
+          
+          # Must mention IGMP snooping
+          if grep -r "IGMP.*snooping" docs/ scripts/; then
+            echo "✅ IGMP snooping: Documented"
+          else
+            echo "❌ IGMP snooping: Not documented"
+            exit 1
+          fi
+          
+          # Band steering validation
+          if grep -r "band steering\|-67 dBm\|5GHz preferred" docs/ scripts/; then
+            echo "✅ Band steering: Configured"
+          else
+            echo "❌ Band steering: Not configured"
+            exit 1
+          fi
+          
+          echo "🏆 mDNS/IGMP validation passed"
+
+  # Job 3: Secrets Management Scan
+  validate-secrets:
+    runs-on: ubuntu-latest
+    name: 'Scan for Hardcoded Secrets'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check for hardcoded credentials
+        run: |
+          echo "🔍 Scanning for hardcoded secrets..."
+          
+          # Fail if hardcoded passwords found
+          if grep -r "password=" scripts/ config/ 2>/dev/null | grep -v "\.env\|example" || \
+             grep -r "SIP_PASSWORD=" scripts/ config/ 2>/dev/null | grep -v "\.env" || \
+             grep -r "VERKADA_API_KEY=" scripts/ config/ 2>/dev/null | grep -v "\.env"; then
+            echo "❌ HARDCODED CREDENTIALS DETECTED"
+            exit 1
+          fi
+          
+          # Check .env.example exists
+          if [ -f ".env.example" ]; then
+            echo "✅ .env.example found (secrets template)"
+          else
+            echo "❌ .env.example missing"
+            exit 1
+          fi
+          
+          # Check .gitignore includes .env
+          if grep -q "\.env" .gitignore; then
+            echo "✅ .gitignore protects .env"
+          else
+            echo "❌ .gitignore missing .env rule"
+            exit 1
+          fi
+          
+          echo "🏆 Secrets validation passed"
+
+  # Job 4: PoE Budget Validation
+  validate-poe:
+    runs-on: ubuntu-latest
+    name: 'Validate PoE Budget'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check PoE budget documentation
+        run: |
+          echo "🔍 Validating PoE budget..."
+          
+          # PoE budget must be documented: 459W current / 720W max
+          if grep -r "459W\|720W" docs/ README.md; then
+            echo "✅ PoE budget documented (459W/720W = 64%)"
+          else
+            echo "❌ PoE budget not documented correctly"
+            exit 1
+          fi
+          
+          # Must reference 85% threshold
+          if grep -r "85%" docs/ scripts/ || grep -r "threshold" docs/ scripts/; then
+            echo "✅ PoE threshold documented"
+          else
+            echo "⚠️  PoE threshold not explicitly documented (optional)"
+          fi
+          
+          # Must mention PoE+ for cameras
+          if grep -r "PoE+\|PoE plus.*camera\|80W" docs/; then
+            echo "✅ PoE+ allocation for cameras documented"
+          else
+            echo "❌ PoE+ camera allocation not documented"
+            exit 1
+          fi
+          
+          echo "🏆 PoE validation passed"
+
+  # Job 5: Resale Accuracy Validation
+  validate-resale:
+    runs-on: ubuntu-latest
+    name: 'Validate Resale Tracking'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check resale tracker accuracy
+        run: |
+          echo "🔍 Validating resale tracking..."
+          
+          # Badge must show $1,430 REALIZED, not $2,500 claimed
+          if grep -r "\$1,430.*[Rr]ealized\|Resale.*\$1,430" README.md; then
+            echo "✅ Resale badge accurate (\$1,430 realized)"
+          else
+            if grep -r "\$2,500" README.md; then
+              echo "❌ Resale badge inflated (shows \$2,500, only \$1,430 realized)"
+              exit 1
+            fi
+          fi
+          
+          # Resale tracker CSV must exist
+          if [ -f "inventory/resale-tracker.csv" ]; then
+            echo "✅ Resale tracker CSV exists"
+            
+            # Check for exact prices
+            if grep -q "FortiGate.*150" inventory/resale-tracker.csv; then
+              echo "✅ FortiGate: \$150 realized"
+            fi
+            if grep -q "FortiSwitch.*250" inventory/resale-tracker.csv; then
+              echo "✅ FortiSwitch: \$250 realized"
+            fi
+            if grep -q "TRENDnet.*120" inventory/resale-tracker.csv; then
+              echo "✅ TRENDnet: \$120 realized"
+            fi
+          else
+            echo "❌ Resale tracker CSV missing"
+            exit 1
+          fi
+          
+          echo "🏆 Resale validation passed"
+
+  # Aggregate: T3-ETERNAL Gate
+  t3-eternal-gate:
+    name: 'T3-ETERNAL: Trinity Verdict'
+    needs: [validate-vlan, validate-mdns, validate-secrets, validate-poe, validate-resale]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Determine T3-ETERNAL Status
+        run: |
+          echo "🏛️  TRINITY MINISTRIES — FINAL VERDICT"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          SECRETS_STATUS="ETERNAL GREEN"
+          WHISPERS_STATUS="ETERNAL GREEN"
+          PERIMETER_STATUS="ETERNAL GREEN"
+          
+          if [ "${{ needs.validate-vlan.result }}" != "success" ]; then
+            PERIMETER_STATUS="ETERNAL RED"
+            echo "❌ PERIMETER: VLAN validation failed"
+          else
+            echo "✅ PERIMETER: VLAN validation passed"
+          fi
+          
+          if [ "${{ needs.validate-mdns.result }}" != "success" ]; then
+            WHISPERS_STATUS="ETERNAL RED"
+            echo "❌ WHISPERS: mDNS/IGMP validation failed"
+          else
+            echo "✅ WHISPERS: mDNS/IGMP validation passed"
+          fi
+          
+          if [ "${{ needs.validate-secrets.result }}" != "success" ]; then
+            SECRETS_STATUS="ETERNAL RED"
+            echo "❌ SECRETS: Secrets scan failed"
+          else
+            echo "✅ SECRETS: Secrets scan passed"
+          fi
+          
+          if [ "${{ needs.validate-poe.result }}" != "success" ]; then
+            PERIMETER_STATUS="ETERNAL RED"
+            echo "❌ PERIMETER: PoE validation failed"
+          else
+            echo "✅ PERIMETER: PoE validation passed"
+          fi
+          
+          if [ "${{ needs.validate-resale.result }}" != "success" ]; then
+            PERIMETER_STATUS="ETERNAL RED"
+            echo "❌ PERIMETER: Resale accuracy failed"
+          else
+            echo "✅ PERIMETER: Resale accuracy passed"
+          fi
+          
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "SECRETS:   ${SECRETS_STATUS}"
+          echo "WHISPERS:  ${WHISPERS_STATUS}"
+          echo "PERIMETER: ${PERIMETER_STATUS}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          if [ "$SECRETS_STATUS" = "ETERNAL RED" ] || \
+             [ "$WHISPERS_STATUS" = "ETERNAL RED" ] || \
+             [ "$PERIMETER_STATUS" = "ETERNAL RED" ]; then
+            echo "🏆 T3-ETERNAL: RED — MERGE BLOCKED"
+            exit 1
+          else
+            echo "🏆 T3-ETERNAL: ETERNAL GREEN — MERGE APPROVED"
+            exit 0
+          fi

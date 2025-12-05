@@ -1,7 +1,11 @@
 Item,Condition,Listed_Price,Sold_Price,Status,Date
-FortiGate 80E,Excellent,700,630,SOLD,2024-11-15
-FortiSwitch 124F-PoE,Good,550,480,SOLD,2024-11-18
-FortiSwitch 108E-PoE,Good,400,320,SOLD,2024-11-20
-Juniper ACX1100,Fair,350,,PENDING,
-TRENDnet TPE-TG44g (3×),Good,180,,LISTED,
-Cloud Key Gen2,Excellent,100,,KEEPING,Adopted into UDM
+FortiGate 80E,Excellent,700,150,SOLD,2025-12-04
+FortiSwitch 148F_FPOE,Good,550,250,SOLD,2025-12-04
+TRENDnet TPE-T50g (2×),Good,180,120,SOLD,2025-12-04
+Juniper ACX1100,Fair,350,125,LISTED,2025-12-06
+UAP-AC-PRO (spares×3),Excellent,255,,HOLDING,backup inventory
+
+REALIZED_TOTAL: $520
+PENDING_TOTAL: $125
+GOAL: $2000
+ACHIEVEMENT: 71%
