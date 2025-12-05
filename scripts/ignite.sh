@@ -6,13 +6,14 @@
 set -euo pipefail
 
 # Colors for dramatic effect
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+# Export colors for use in subshells
+export RED='\033[0;31m'
+export GREEN='\033[0;32m'
+export YELLOW='\033[1;33m'
+export BLUE='\033[0;34m'
+export PURPLE='\033[0;35m'
+export CYAN='\033[0;36m'
+export NC='\033[0m' # No Color
 
 # Banner
 echo -e "${CYAN}"
@@ -80,13 +81,13 @@ phase0_decom_prep() {
     log "${PURPLE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     
     log "${YELLOW}💰 Calculating resale value for legacy gear...${NC}"
-    log "   FortiGate 80E .............. $600–$800"
-    log "   FortiSwitch 124F-PoE ....... $450–$600"
-    log "   FortiSwitch 108E-PoE ....... $300–$400"
-    log "   Juniper ACX1100 ............ $250–$350"
-    log "   3× TRENDnet TPE-TG44g ...... $120–$180"
-    log "   Cloud Key Gen2 ............. $80–$100 (or adopt)"
-    log "   ${GREEN}TOTAL PROJECTED: $1,800–$2,430${NC}"
+    log "   FortiGate 80E .............. \$600–\$800"
+    log "   FortiSwitch 124F-PoE ....... \$450–\$600"
+    log "   FortiSwitch 108E-PoE ....... \$300–\$400"
+    log "   Juniper ACX1100 ............ \$250–\$350"
+    log "   3× TRENDnet TPE-TG44g ...... \$120–\$180"
+    log "   Cloud Key Gen2 ............. \$80–\$100 (or adopt)"
+    log "   ${GREEN}TOTAL PROJECTED: \$1,800–\$2,430${NC}"
     
     log ""
     log "${YELLOW}🔧 Factory reset checklist:${NC}"
@@ -107,7 +108,8 @@ phase1_core_swap() {
     log "${RED}🔥 PHASE 1: CORE SWAP — Day 1 Cutover${NC}"
     log "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     
-    local start_time=$(date +%s)
+    local start_time
+    start_time=$(date +%s)
     
     log "${YELLOW}🛡️ Bringing UDM Pro Max online at ${UDM_HOST}...${NC}"
     if ping -c 3 "$UDM_HOST" &> /dev/null; then
@@ -135,10 +137,14 @@ phase1_core_swap() {
         log "${YELLOW}⚠️  Juniper still responding — verify power-off${NC}"
     fi
     
-    local end_time=$(date +%s)
-    local duration=$((end_time - start_time))
-    local minutes=$((duration / 60))
-    local seconds=$((duration % 60))
+    local end_time
+    end_time=$(date +%s)
+    local duration
+    duration=$((end_time - start_time))
+    local minutes
+    minutes=$((duration / 60))
+    local seconds
+    seconds=$((duration % 60))
     
     log ""
     log "${GREEN}✅ Phase 1 complete${NC}"
@@ -188,7 +194,7 @@ phase3_verkada_migration() {
     log "${GREEN}✅ All 15 cameras online, 0 packet loss${NC}"
     
     log "${YELLOW}💀 Powering off 3× TRENDnet TPE-TG44g injectors...${NC}"
-    log "${GREEN}✅ TRENDnet PoE eliminated — $160 resale secured${NC}"
+    log "${GREEN}✅ TRENDnet PoE eliminated — \$160 resale secured${NC}"
     log "${GREEN}   Power savings: 60W (TRENDnet waste eliminated)${NC}"
     
     log "${GREEN}✅ Phase 3 complete — Verkada island secured${NC}"
@@ -270,8 +276,8 @@ final_summary() {
     log "${GREEN}✅ Phase 5: T3-ETERNAL Validation .......... 🟢 GREEN${NC}"
     log ""
     log "${YELLOW}💰 Resale Tracker:${NC}"
-    log "   Realized: $1,430"
-    log "   Projected: $2,500"
+    log "   Realized: \$1,430"
+    log "   Projected: \$2,500"
     log "   Status: 71% complete"
     log ""
     log "${YELLOW}⚡ Power Savings:${NC}"
@@ -280,7 +286,7 @@ final_summary() {
     log "   Total: -140W"
     log ""
     log "${YELLOW}💸 Licensing Savings:${NC}"
-    log "   FortiGate SmartNet: $960/year eliminated (permanent)"
+    log "   FortiGate SmartNet: \$960/year eliminated (permanent)"
     log ""
     log "${CYAN}═══════════════════════════════════════════════════════════${NC}"
     log "${CYAN}         THE FORTRESS IS A CLASSROOM.${NC}"

@@ -10,6 +10,9 @@ on:
 
 permissions:
   contents: read
+  issues: write
+  security-events: write
+  pull-requests: read
 
 jobs:
   # Job 1: VLAN Configuration Validation
