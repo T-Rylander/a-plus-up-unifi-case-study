@@ -12,7 +12,7 @@ set -euo pipefail
 # Configuration
 UNIFI_HOST="${UNIFI_HOST:-10.99.0.1}"
 UNIFI_ADMIN="${UNIFI_ADMIN:-admin}"
-UNIFI_PASS="${UNIFI_PASS:?Error: UNIFI_PASS not set}"
+UNIFI_PASS="${UNIFI_PASS:-}"  # Optional in CI
 UNIFI_PORT=8443
 
 # Color codes
@@ -45,11 +45,15 @@ else
     SECRETS_STATUS=("ETERNAL RED" "UDM unreachable")
 fi
 
-# Check 2: UDM SNMP (Management VLAN monitoring)
-if snmpget -v2c -c public "${UNIFI_HOST}" sysUpTime.0 >/dev/null 2>&1; then
-    echo "  ✅ SNMP Health: UP"
+# Check 2: UDM SNMP (Management VLAN monitoring) — optional
+if command -v snmpget &> /dev/null; then
+    if snmpget -v2c -c public "${UNIFI_HOST}" sysUpTime.0 >/dev/null 2>&1; then
+        echo "  ✅ SNMP Health: UP"
+    else
+        echo "  ⚠️  SNMP: No response (check community string)"
+    fi
 else
-    echo "  ⚠️  SNMP: No response (check community string)"
+    echo "  ℹ️  SNMP: Not available in CI environment"
 fi
 
 # Check 3: Google Workspace SSO Ready

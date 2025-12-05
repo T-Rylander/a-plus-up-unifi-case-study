@@ -13,12 +13,29 @@ fi
 
 echo "📊 Current Resale Status:"
 echo ""
-awk -F',' 'NR==1 {print; print "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"} NR>1 {print}' "$RESALE_CSV"
+# Print header and data rows (skip metadata rows)
+awk -F',' 'NR==1 {print; print "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"} NR>1 && NF==6 {print}' "$RESALE_CSV"
 
 echo ""
-TOTAL=$(awk -F',' 'NR>1 && $4 != "" {sum += $4} END {print sum}' "$RESALE_CSV")
+# Calculate total from Sold_Price column (column 4), only count numeric values
+TOTAL=0
+while IFS=',' read -r item _ _ sold _ _; do
+    # Skip header and empty lines
+    if [ "$item" = "Item" ] || [ -z "$item" ]; then
+        continue
+    fi
+    # Only count if sold_price is not empty and is numeric
+    if [ -n "${sold:-}" ] && [ "${sold}" -eq "${sold}" ] 2>/dev/null; then
+        TOTAL=$((TOTAL + sold))
+    fi
+done < "$RESALE_CSV"
+
 TARGET=2000
-PCT=$((TOTAL * 100 / TARGET))
+if [ "$TARGET" -gt 0 ]; then
+    PCT=$((TOTAL * 100 / TARGET))
+else
+    PCT=0
+fi
 
 echo "Total Realized: \$${TOTAL}"
 echo "Target: \$${TARGET}"
