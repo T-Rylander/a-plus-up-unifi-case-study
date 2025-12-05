@@ -13,7 +13,6 @@ set -euo pipefail
 UNIFI_HOST="${UNIFI_HOST:-10.99.0.1}"
 UNIFI_ADMIN="${UNIFI_ADMIN:-admin}"
 UNIFI_PASS="${UNIFI_PASS:-}"  # Optional in CI
-UNIFI_PORT=8443
 
 # Color codes
 GREEN='\033[0;32m'
