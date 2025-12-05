@@ -1,0 +1,307 @@
+{
+  "version": "1.0",
+  "created": "2025-11-10",
+  "source": "Blueprint v2.5, VLAN Architecture ADR 002",
+  "description": "A+UP Charter School VLAN Network Configuration (6 VLANs)",
+  "vlans": [
+    {
+      "id": 10,
+      "name": "Students",
+      "purpose": "Chromebooks and student devices (compliance + monitoring)",
+      "subnet": "10.10.0.0/23",
+      "gateway": "10.10.0.1",
+      "netmask": "255.255.254.0",
+      "broadcast": "10.10.3.255",
+      "usable_hosts": 510,
+      "dhcp": {
+        "enabled": true,
+        "lease_time_seconds": 14400,
+        "pool_start": "10.10.1.0",
+        "pool_end": "10.10.3.199",
+        "reserved": "10.10.3.200-10.10.3.255"
+      },
+      "qos": {
+        "priority": "Standard",
+        "dscp": "0",
+        "802_1p": 0,
+        "rate_limit_mbps": null
+      },
+      "firewall_rules": [
+        {
+          "rule_id": 1,
+          "name": "Students Deny Internal",
+          "source": "VLAN 10",
+          "destination": "RFC1918 (internal)",
+          "action": "DENY",
+          "rationale": "Students cannot access staff/management networks"
+        },
+        {
+          "rule_id": 2,
+          "name": "Students Web/DNS Allow",
+          "source": "VLAN 10",
+          "destination": "0.0.0.0/0",
+          "ports": "80, 443, 53",
+          "action": "ALLOW",
+          "rationale": "Web and DNS only (no P2P)"
+        }
+      ],
+      "band_steering": {
+        "enabled": true,
+        "rssi_threshold_dbm": -70,
+        "preference_band": "5GHz"
+      }
+    },
+    {
+      "id": 20,
+      "name": "Staff",
+      "purpose": "Staff workstations, printers (40+), admin access",
+      "subnet": "10.20.0.0/24",
+      "gateway": "10.20.0.1",
+      "netmask": "255.255.255.0",
+      "broadcast": "10.20.0.255",
+      "usable_hosts": 254,
+      "dhcp": {
+        "enabled": true,
+        "lease_time_seconds": 86400,
+        "pool_start": "10.20.0.10",
+        "pool_end": "10.20.0.200",
+        "reserved": "10.20.0.1-10.20.0.9, 10.20.0.201-10.20.0.255"
+      },
+      "qos": {
+        "priority": "High",
+        "dscp": "24",
+        "802_1p": 4,
+        "rate_limit_mbps": null
+      },
+      "firewall_rules": [
+        {
+          "rule_id": 4,
+          "name": "Staff Full Internet",
+          "source": "VLAN 20",
+          "destination": "0.0.0.0/0",
+          "ports": "Any",
+          "action": "ALLOW"
+        },
+        {
+          "rule_id": 5,
+          "name": "Staff VoIP Optional",
+          "source": "VLAN 20",
+          "destination": "VLAN 50",
+          "ports": "5060-5061",
+          "action": "ALLOW",
+          "rationale": "Staff can dial phones (optional feature)"
+        }
+      ],
+      "band_steering": {
+        "enabled": true,
+        "rssi_threshold_dbm": -70,
+        "preference_band": "5GHz"
+      },
+      "special_features": {
+        "mdns_reflector": true,
+        "printer_vlan": true,
+        "printer_count": 40,
+        "printer_ip_range": "10.20.0.50-10.20.0.99"
+      }
+    },
+    {
+      "id": 30,
+      "name": "Guest",
+      "purpose": "Public WiFi for parents, contractors, community",
+      "subnet": "10.30.0.0/24",
+      "gateway": "10.30.0.1",
+      "netmask": "255.255.255.0",
+      "broadcast": "10.30.0.255",
+      "usable_hosts": 254,
+      "dhcp": {
+        "enabled": true,
+        "lease_time_seconds": 7200,
+        "pool_start": "10.30.0.10",
+        "pool_end": "10.30.0.250",
+        "reserved": "10.30.0.1-10.30.0.9, 10.30.0.251-10.30.0.255"
+      },
+      "qos": {
+        "priority": "Throttled",
+        "dscp": "0",
+        "802_1p": 0,
+        "rate_limit_mbps": {
+          "download": 25,
+          "upload": 10
+        }
+      },
+      "firewall_rules": [
+        {
+          "rule_id": 6,
+          "name": "Guests Web/DNS Allow",
+          "source": "VLAN 30",
+          "destination": "0.0.0.0/0",
+          "ports": "80, 443, 53",
+          "action": "ALLOW"
+        },
+        {
+          "rule_id": 7,
+          "name": "Guests Deny Internal",
+          "source": "VLAN 30",
+          "destination": "RFC1918",
+          "action": "DENY",
+          "rationale": "Guests cannot access internal networks"
+        }
+      ],
+      "band_steering": {
+        "enabled": true,
+        "rssi_threshold_dbm": -67,
+        "preference_band": "5GHz"
+      }
+    },
+    {
+      "id": 50,
+      "name": "VoIP",
+      "purpose": "Yealink phones (8), wireless headsets (future), real-time voice",
+      "subnet": "10.50.0.0/27",
+      "gateway": "10.50.0.1",
+      "netmask": "255.255.255.224",
+      "broadcast": "10.50.0.31",
+      "usable_hosts": 30,
+      "notes": "8 phones + 22 headroom for expansion",
+      "dhcp": {
+        "enabled": true,
+        "lease_time_seconds": null,
+        "static_binding": true,
+        "pool_start": null,
+        "pool_end": null,
+        "reserved": "10.50.0.1 (gateway), 10.50.0.2-10.50.0.30 (phones, static by MAC)"
+      },
+      "qos": {
+        "priority": "DSCP EF (Expedited Forwarding)",
+        "dscp": "184",
+        "802_1p": 7,
+        "rate_limit_mbps": null,
+        "jitter_target_ms": 30
+      },
+      "firewall_rules": [
+        {
+          "rule_id": 8,
+          "name": "VoIP Outbound",
+          "source": "VLAN 50",
+          "destination": "0.0.0.0/0",
+          "ports": "5060-5061, 16384-32768 (RTP)",
+          "protocol": "UDP/TCP",
+          "action": "ALLOW"
+        },
+        {
+          "rule_id": 9,
+          "name": "VoIP Internal",
+          "source": "VLAN 50",
+          "destination": "VLAN 50",
+          "ports": "5060-5061, 16384-32768",
+          "action": "ALLOW",
+          "rationale": "Inter-phone calls"
+        }
+      ],
+      "sip_config": {
+        "sip_server": "sip.spectrum.com",
+        "sip_port": 5060,
+        "backup_server": "backup.sip.spectrum.com",
+        "srtp_enabled": true,
+        "codec": "G.722"
+      }
+    },
+    {
+      "id": 60,
+      "name": "Cameras",
+      "purpose": "Verkada cloud cameras (11: 8 CD52 + 3 CD62), surveillance video",
+      "subnet": "10.60.0.0/26",
+      "gateway": "10.60.0.1",
+      "netmask": "255.255.255.192",
+      "broadcast": "10.60.0.63",
+      "usable_hosts": 62,
+      "notes": "8 CD52 @ 90W + 3 CD62 @ 120W; 4 legacy cameras (TP-Link island via trunk)",
+      "dhcp": {
+        "enabled": true,
+        "lease_time_seconds": null,
+        "static_binding": true,
+        "pool_start": null,
+        "pool_end": null,
+        "reserved": "10.60.0.1 (gateway), 10.60.0.2-10.60.0.62 (cameras, static by MAC)"
+      },
+      "qos": {
+        "priority": "AF41 (Assured Forwarding, RFC 2597)",
+        "dscp": "36",
+        "802_1p": 4,
+        "rate_limit_mbps": null,
+        "bandwidth_profile": {
+          "idle_kbps": 100,
+          "peak_kbps": 3000,
+          "burst_kbps": 5000
+        }
+      },
+      "firewall_rules": [
+        {
+          "rule_id": 10,
+          "name": "Cameras Cloud Uplink",
+          "source": "VLAN 60",
+          "destination": "Verkada DNS",
+          "ports": "443 (HTTPS)",
+          "action": "ALLOW",
+          "rationale": "Cloud recording + sync only"
+        }
+      ],
+      "cloud_config": {
+        "provider": "Verkada",
+        "retention_days": 365,
+        "recording_quality": "High (1080p/1440p)",
+        "person_detection": true,
+        "cloud_replication": "AWS (multi-region)"
+      }
+    },
+    {
+      "id": 99,
+      "name": "Management",
+      "purpose": "UDM Pro Max, USW-Pro-Max-48-PoE, APC UPS monitoring, admin SSH",
+      "subnet": "10.99.0.0/28",
+      "gateway": "10.99.0.1",
+      "netmask": "255.255.255.240",
+      "broadcast": "10.99.0.15",
+      "usable_hosts": 14,
+      "dhcp": {
+        "enabled": false,
+        "static": true,
+        "entries": [
+          "10.99.0.1 (UDM gateway/controller)",
+          "10.99.0.2 (USW-Pro-Max-48-PoE)",
+          "10.99.0.3 (APC UPS)",
+          "10.99.0.4-10.99.0.14 (spares for monitoring agents)"
+        ]
+      },
+      "qos": {
+        "priority": "CS6 (Control Signaling)",
+        "dscp": "48",
+        "802_1p": 6,
+        "rate_limit_mbps": null
+      },
+      "firewall_rules": [
+        {
+          "rule_id": 11,
+          "name": "Management Lockdown",
+          "source": "Any",
+          "destination": "VLAN 99",
+          "ports": "SSH (22), SNMP (161), HTTPS (443)",
+          "source_restriction": "Admin workstations only",
+          "action": "ALLOW"
+        }
+      ],
+      "access_control": {
+        "ssh_authorized_ips": ["10.20.0.0/24", "external_VPN_IP"],
+        "ssh_key_required": true,
+        "https_certificate": "Self-signed (internal trusted)"
+      }
+    }
+  ],
+  "summary": {
+    "total_vlans": 6,
+    "total_hosts": 1184,
+    "qos_classes": 5,
+    "firewall_rules": 11,
+    "compliance_notes": "CIPA (V10 isolated), FERPA (V20 sensitive data), COPPA (V10 child protection), MSA (V99 audit logging)"
+  }
+}
