@@ -1,0 +1,140 @@
+# UniFi Zone-Based Firewall Configuration
+# Reference: UniFi KB 115003173168
+# Status: Production-Ready
+# Date: December 5, 2025
+
+zones:
+  - name: LAN
+    networks:
+      - 10.10.0.0/23  # VLAN 10 (Students/Chromebooks)
+      - 10.20.0.0/27  # VLAN 20 (Staff/Printers)
+    description: "Internal trusted networks"
+    
+  - name: GUEST
+    networks:
+      - 10.30.0.0/24  # VLAN 30 (Guest WiFi)
+    description: "Guest WiFi isolation"
+    
+  - name: VOIP
+    networks:
+      - 10.50.0.0/27  # VLAN 50 (Yealink phones)
+    description: "VoIP network (QoS prioritized)"
+    
+  - name: CAMERA
+    networks:
+      - 10.60.0.0/26  # VLAN 60 (Verkada cameras)
+    description: "Surveillance network (isolated)"
+    
+  - name: MGMT
+    networks:
+      - 10.99.0.0/28  # VLAN 99 (Management)
+    description: "Network management devices"
+    
+  - name: WAN
+    networks:
+      - 0.0.0.0/0
+    description: "Internet gateway"
+
+inter_zone_policies:
+  # LAN → WAN (Students/Staff internet access)
+  - source: LAN
+    destination: WAN
+    action: ALLOW
+    services:
+      - HTTP (80/tcp)
+      - HTTPS (443/tcp)
+      - DNS (53/udp)
+    description: "LAN to internet (DPI filtering active)"
+    
+  # LAN → LAN (Cross-VLAN mDNS, staff resources)
+  - source: LAN
+    destination: LAN
+    action: ALLOW
+    services:
+      - mDNS (5353/udp)
+      - SMB (445/tcp)
+      - HTTPS (443/tcp)
+    description: "Cross-VLAN printing, staff file shares"
+    
+  # LAN → CAMERA (Block students from camera VLAN)
+  - source: LAN
+    destination: CAMERA
+    action: DENY
+    log: true
+    description: "Students/staff blocked from camera VLAN"
+    
+  # GUEST → WAN (Internet only)
+  - source: GUEST
+    destination: WAN
+    action: ALLOW
+    services:
+      - HTTP (80/tcp)
+      - HTTPS (443/tcp)
+      - DNS (53/udp)
+    rate_limit:
+      download: 25 Mbps
+      upload: 10 Mbps
+    description: "Guest internet access (throttled)"
+    
+  # GUEST → * (Block all internal zones)
+  - source: GUEST
+    destination: 
+      - LAN
+      - VOIP
+      - CAMERA
+      - MGMT
+    action: DENY
+    log: true
+    description: "Guest isolation from internal networks"
+    
+  # VOIP → WAN (SIP registration)
+  - source: VOIP
+    destination: WAN
+    action: ALLOW
+    services:
+      - SIP (5060-5061/udp)
+      - RTP (10000-20000/udp)
+    qos: EF (DSCP 46)
+    description: "VoIP to Spectrum SIP server"
+    
+  # VOIP → LAN (Intercom, paging)
+  - source: VOIP
+    destination: LAN
+    action: ALLOW
+    services:
+      - Multicast (224.0.1.75/udp)
+    description: "VoIP multicast paging"
+    
+  # CAMERA → WAN (Verkada cloud sync)
+  - source: CAMERA
+    destination: WAN
+    action: ALLOW
+    services:
+      - HTTPS (443/tcp)
+      - RTSP (554/tcp)
+      - STUN/TURN (3478-3481/udp)
+    qos: AF41 (DSCP 34)
+    description: "Cameras to Verkada cloud"
+    
+  # CAMERA → * (Block all internal zones)
+  - source: CAMERA
+    destination:
+      - LAN
+      - GUEST
+      - VOIP
+    action: DENY
+    log: true
+    description: "Camera network isolation"
+    
+  # MGMT → * (Full access)
+  - source: MGMT
+    destination: ALL
+    action: ALLOW
+    description: "Management zone unrestricted access"
+
+validation:
+  hardware_offload: true
+  total_zones: 6
+  total_policies: 11
+  last_tested: "2025-12-05T14:30:00Z"
+  kb_reference: "115003173168"

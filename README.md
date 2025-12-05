@@ -11,19 +11,19 @@
 This repository contains the complete technical documentation, architecture decisions, and operational procedures for the A+UP Charter School network infrastructure overhaul. The project transforms a legacy multi-vendor environment (FortiGate, Juniper, Fortinet stack) into a unified UniFi ecosystem supporting:
 
 - **150+ Chromebooks** (VLAN 10: 10.10.0.0/23) — 802.11k/v roaming
-- **16 UAP-AC-PRO access points** — 6-channel 80MHz (36/52/100/116/132/149)
-- **11 Verkada cameras** (VLAN 60: 10.60.0.0/26) — STUN/TURN ports 3478-3481
+- **13 UAP-AC-PRO access points** — 6-channel 40MHz (36/44/149/157 non-DFS)
+- **12 Verkada cameras** (VLAN 60: 10.60.0.0/26) — STUN/TURN ports 3478-3481
 - **8 Yealink SIP phones** (VLAN 50: 10.50.0.0/27) — SIP ALG disabled
-- **40+ wireless printers** — Avahi mDNS reflector (VLAN 10 ↔ VLAN 20)
-- **95% printer discovery** (Avahi container, VLAN-selective)
+- **12 wireless printers** — Native UniFi mDNS (VLAN 10 ↔ VLAN 20)
+- **95% printer discovery** (native mDNS, VLAN-selective)
 - **15-minute failover RTO** with staggered PoE boot
 
-### T3-ETERNAL Corrections Applied (15 Critical Gaps Fixed)
+### Technical Corrections Applied (Per Leo Audit)
 
-✅ **NO Zone-Based Firewall** (feature doesn't exist) → Firewall Groups  
+✅ **Zone-Based Firewall** (KB 115003173168) → 6 zones with inter-zone rules  
 ✅ **Manual QoS** (CyberSecure doesn't auto-tag) → Traffic Rules 950/47.5 Mbps  
-✅ **Separate 2.4GHz Printer SSID** (can't do per-AP radio) → AP Group + SSID  
-✅ **Avahi mDNS Container** (native toggle affects all VLANs) → Docker reflector  
+✅ **High-Density WiFi** → 40 MHz channels, Airtime Fairness, medium power  
+✅ **Native mDNS** (VLAN-selective) → No Docker containers required  
 ✅ **PoE Inrush 2.5x** (1195W > 720W budget) → Staggered boot script  
 ✅ **Asymmetric Smart Queues** (1000/50 Mbps WAN) → 950/47.5 Mbps  
 ✅ **10G LACP Trunk** → bond0/bond1 explicit configuration  
@@ -40,7 +40,7 @@ This repository contains the complete technical documentation, architecture deci
 
 | Metric | Value | Notes |
 |--------|-------|-------|
-| **Upfront Cost** | $3,814 | $2,120 hardware + $99 licensing + $805 labor |
+| **Upfront Cost** | $3,367 | $2,120 hardware + $99 licensing + $358 labor |
 | **Resale Offset** | ~$1,200 | Legacy FortiGate, Juniper, FortiSwitch gear |
 | **Net Investment** | $2,614 | After 65% resale offset |
 | **Monthly Support** | $599 | Service-only (10 hrs/month) |
@@ -59,22 +59,23 @@ This repository contains the complete technical documentation, architecture deci
 
 ### Distribution Switch
 - **USW-Pro-Max-48-PoE**: 720W PoE budget, 40 Gbps backplane, 10G uplink
-- **Port Allocation** (39/48 used):
-  - Ports 1-16: Access Points (16× UAP-AC-PRO)
-  - Ports 17-24: VoIP Devices (8× Yealink T43U)
-  - Ports 25-39: Cameras (15× Verkada, PoE+)
+- **Port Allocation** (33/48 used):
+  - Ports 1-13: Access Points (13× UAP-AC-PRO)
+  - Ports 14-21: VoIP Devices (8× Yealink T43U)
+  - Ports 22-33: Cameras (12× Verkada, PoE+)
   - Ports 40-48: Spares + UPS
 
 ### Wireless Access Points
-- **16× UAP-AC-PRO** (includes 3 new units for coverage)
-  - Upstairs: 10 APs (channels 36/52/100)
-  - Downstairs: 6 APs (channels 116/132, WAP13 in Room 107)
-  - 2.4GHz carve: WAP2/4 only (printers, 70% saturation mitigation)
+- **13× UAP-AC-PRO** (existing inventory)
+  - 40 MHz channel width (high-density optimization)
+  - Non-DFS channels: 36, 44, 149, 157 (no radar interference)
+  - Transmit power: Medium (17 dBm) for cell density
+  - 2.4 GHz globally disabled (all devices 5 GHz capable)
 
 ### Endpoints
 - **8 Yealink T43U phones**: VLAN 50, direct SIP (Spectrum retired)
-- **12-15 Verkada cameras** (CD52/CD62 PoE+): VLAN 60, 100 Kbps idle / 3-45 Mbps live
-- **40+ wireless printers**: Ad-hoc VLAN 20, mDNS/Bonjour + AirPrint fallback
+- **12 Verkada cameras** (CD52/CD62 PoE+): VLAN 60, 100 Kbps idle / 3-45 Mbps live
+- **12 wireless printers**: VLAN 20, native UniFi mDNS (5 GHz capable)
 
 ### Power & Resilience
 - **APC SMX2000LVNC UPS**: 8-12 min runtime, 40% PoE baseline headroom
@@ -89,7 +90,7 @@ This repository contains the complete technical documentation, architecture deci
 | VLAN | Purpose | Subnet | Usable Hosts | DHCP Lease | QoS | Notes |
 |------|---------|--------|--------------|-----------|-----|-------|
 | **10** | Students/Chromebooks | 10.10.0.0/23 | 510 | 4 hours | Standard | DPI for Google Meet/Classroom/YouTube; -67 dBm steering |
-| **20** | Staff/Printers | 10.20.0.0/24 | 254 | 24 hours | High Priority | mDNS enabled; AirPrint fallback |
+| **20** | Staff/Printers | 10.20.0.0/27 | 30 | 24 hours | High Priority | Native UniFi mDNS enabled |
 | **30** | Guest WiFi | 10.30.0.0/24 | 254 | 2 hours | Throttled | 25 Mbps down / 10 Mbps up; captive portal; 90-day logs |
 | **50** | VoIP (Yealink) | 10.50.0.0/27 | 30 | Infinite | EF (DSCP) | G.722 codec; jitter <30ms; 8 devices + 22 headroom |
 | **60** | Cameras (Verkada) | 10.60.0.0/26 | 62 | Infinite | AF41 | PoE+; 100 Kbps idle; 45 Mbps burst; RSTP aligned |
@@ -97,8 +98,8 @@ This repository contains the complete technical documentation, architecture deci
 
 ### Firewall Rules (11 Rules Using Groups)
 
-⚠️ **CORRECTION:** NO Zone-Based Firewall (feature doesn't exist in UniFi)  
-✅ **Solution:** Firewall Groups (11 groups) + 11 rules with hardware offload
+✅ **Zone-Based Firewall** (UniFi KB 115003173168)  
+6 zones: LAN, GUEST, VOIP, CAMERA, MGMT, WAN → Inter-zone policies
 
 **Firewall Groups (11 Total):**
 - Address Groups: EdSecure_Networks, Surveillance_Networks, Guest_Networks, VoIP_Networks, Management_Networks, Google_Workspace, Verkada_Cloud
@@ -133,10 +134,12 @@ This repository contains the complete technical documentation, architecture deci
 ## WiFi Optimization (From Assessment)
 
 ### Band Steering & Roaming
-- **5GHz Priority**: Channels 36, 52, 100, 116, 132, 149 (80 MHz separation, 40 MHz fallback)
+- **5GHz Channels**: 36, 44, 149, 157 (40 MHz, non-DFS)
+- **Transmit Power**: Medium (17 dBm) for dense deployment
 - **RSSI Threshold**: -70 dBm (hard boundary), -67 dBm steering minimum
 - **802.11k/v/r Enabled**: Fast roaming support for Chromebook classroom transitions
-- **2.4GHz Disabled Globally**: Except WAP2/4 (printers, low power)
+- **Airtime Fairness**: Enabled on all SSIDs (high-density optimization)
+- **2.4GHz Globally Disabled**: All devices 5 GHz capable
 - **Expected Outcome**: 92-96% coverage above -65 dBm; <3% drop rate; <5s roaming
 
 ### Coverage Gap Closure
@@ -193,11 +196,11 @@ This repository contains the complete technical documentation, architecture deci
 
 ## Printer Integration
 
-### mDNS Reflector & AirPrint
-- **VLAN**: 20 (Staff/Printers, 10.20.0.0/24)
-- **2.4GHz Carve**: WAP2/4 only (low power for printer discovery)
-- **mDNS Configuration**: UDM > Networks > Multicast DNS (enable)
-- **Fallback**: Avahi/Bonjour (if UniFi mDNS unreliable)
+### mDNS Native UniFi Implementation
+- **VLAN**: 20 (Staff/Printers, 10.20.0.0/27)
+- **Configuration**: UDM > Networks > Multicast DNS (enable)
+- **VLAN-Selective Reflection**: VLAN 10 ↔ VLAN 20 only
+- **Multicast Enhancement**: IGMPv3 enabled
 - **Services**: mDNS/Bonjour (UDP 5353), HP JetDirect (TCP 80, 161, 8289), SLP (UDP 427)
 - **DHCP Reservation**: Static IPs for all printers (reliability + inventory tracking)
 - **Multicast Enhancement**: Enabled on UDM for cross-VLAN printing
@@ -232,8 +235,8 @@ This repository contains the complete technical documentation, architecture deci
 
 ### Lab Forge (Nov 17-23)
 - VLAN design; DPI rule tuning
-- 16× AP channel spread tuning (36/52/100/116/132/149)
-- 2.4GHz carve validation (WAP2/4 only)
+- 13× AP channel spread tuning (36/44/149/157 non-DFS)
+- Airtime Fairness & Multicast Enhancement validation
 - RADIUS/PSK credential distribution
 - Verkada PoE & 45 Mbps burst testing
 - mDNS/AirPrint fallback lab tests
@@ -247,7 +250,7 @@ This repository contains the complete technical documentation, architecture deci
 - 99% uptime target
 
 ### AP Swarm + RADIUS (Nov 26)
-- 16× AP adoption (sequential, one per minute)
+- 13× AP adoption (sequential, one per minute)
 - SSID/RADIUS/PSK distribution
 - 30 Chromebook roaming tests (5-sec max handoff)
 - Printer carve deployment
@@ -289,10 +292,10 @@ This repository contains the complete technical documentation, architecture deci
 | Hardware | UDM Pro Max | 1 | $599 | $599 |
 | Hardware | USW-Pro-Max-48-PoE | 1 | $1,299 | $1,299 |
 | Hardware | SFP Module (UF-SM-1G-S) | 1 | $15 | $15 |
-| Hardware | UAP-AC-PRO (3 new units) | 3 | $149 | $447 |
+| Hardware | (Existing 13 APs) | 0 | $0 | $0 |
 | Licenses | CyberSecure (1-year) | 1 | $99 | $99 |
 | Labor | Diagnostics & Setup | 1 | $700 | $700 |
-| **Total** | | | | **$3,160** |
+| **Total** | | | | **$2,713** |
 
 ### Resale Offset
 
@@ -310,12 +313,12 @@ This repository contains the complete technical documentation, architecture deci
 
 | Category | Amount | Notes |
 |----------|--------|-------|
-| Upfront Hardware | $3,160 | One-time |
+| Upfront Hardware | $2,713 | One-time |
 | Resale Offset (conservative) | -$1,200 | 65% of legacy gear |
-| Net Upfront Investment | $1,960 | Client out-of-pocket |
+| Net Upfront Investment | $1,513 | Client out-of-pocket |
 | Year 1 Support | $7,188 | $599/month × 12 |
 | Years 2-3 Support | $14,376 | $599/month × 24 |
-| Total 3-Year Cost | $23,524 | Hardware + support |
+| Total 3-Year Cost | $23,077 | Hardware + support |
 | **Estimated Savings** | **$34,452** | Reduced overages + reactive calls |
 | **Net ROI (3-year)** | **Immediate** | Overage bleed stops month 1 |
 
